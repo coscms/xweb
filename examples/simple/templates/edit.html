@@ -1,0 +1,25 @@
+{{include "header.html"}}
+
+<form method="post" class="form-horizontal">
+	{{XsrfFormHtml}}
+	 <div class="control-group">
+<label class="control-label" for="inputEmail">用户名</label>
+<div class="controls">
+				<input type="hidden" name="user.id" value="{{.Id}}"/>
+				<input name="user.name" type="text" value="{{.User.Name}}"/>
+				</div>
+		 </div>
+<div class="control-group">
+<label class="control-label" for="inputPassword">密码</label>
+<div class="controls">
+				<input name="user.passwd" type="password" value="{{.User.Passwd}}"/>
+				</div>
+</div>
+ <div class="control-group">
+<div class="controls">
+				<input type="submit" value="修改" class="btn btn-warning btn-large">
+				</div>
+	</div>
+				</form>
+
+{{include "footer.html"}}

@@ -1,0 +1,17 @@
+
+{{include "header.html"}}
+
+<table class="table table-bordered table-striped">
+	<tr><td>用户名</td><td>密码</td><td>操作</td></tr>
+	{{range .T.Users}}
+			<tr><td>{{.Name}}</td><td>{{.Passwd}}</td><td>
+				{{if Eq .Name "admin"}}
+				<i>不可删除</i>
+				{{else}}
+			<a class="btn btn-warning" href="/edit?id={{.Id}}"><i class="icon-pencil icon-white"></i> 修改</a>
+			<a class="btn btn-danger" href="/delete?id={{.Id}}"><i class="icon-remove icon-white"></i> 删除</a>
+			{{end}}
+			</td></tr>
+			{{end}}</table>
+
+{{include "footer.html"}}
