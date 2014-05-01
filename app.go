@@ -27,7 +27,7 @@ type App struct {
 	BasePath        string
 	Name            string //[SWH|+]
 	Routes          []Route
-	RoutesEq        map[string]Route
+	RoutesEq        map[string]map[string]Route
 	filters         []Filter
 	Server          *Server
 	AppConfig       *AppConfig
@@ -92,7 +92,7 @@ func NewApp(args ...string) *App {
 	return &App{
 		BasePath: path,
 		Name:     name, //[SWH|+]
-		RoutesEq: make(map[string]Route),
+		RoutesEq: make(map[string]map[string]Route),
 		AppConfig: &AppConfig{
 			Mode:              Product,
 			StaticDir:         "static",
@@ -262,7 +262,12 @@ func (a *App) addRoute(r string, methods map[string]bool, t reflect.Type, handle
 }
 
 func (a *App) addEqRoute(r string, methods map[string]bool, t reflect.Type, handler string) {
-	a.RoutesEq[r] = Route{Path: r, HttpMethods: methods, HandlerMethod: handler, HandlerElement: t}
+	if _, ok := a.RoutesEq[r]; !ok {
+		a.RoutesEq[r] = make(map[string]Route)
+	}
+	for v, _ := range methods {
+		a.RoutesEq[r][v] = Route{HandlerMethod: handler, HandlerElement: t}
+	}
 }
 
 var (
@@ -384,19 +389,24 @@ func (a *App) routeHandler(req *http.Request, w http.ResponseWriter) {
 	requestPath = req.URL.Path //[SWH|+]support filter change req.URL.Path
 
 	reqPath := removeStick(requestPath)
-	if route, ok := a.RoutesEq[reqPath]; ok {
-		var isBreak bool = false
-		var args []reflect.Value
-		isBreak, statusCode = a.run(req, w, route, args)
-		if isBreak {
-			return
+	allowMethod := Ternary(req.Method == "HEAD", "GET", req.Method).(string)
+	isFind := false
+	if routes, ok := a.RoutesEq[reqPath]; ok {
+		if route, ok := routes[allowMethod]; ok {
+			var isBreak bool = false
+			var args []reflect.Value
+			isBreak, statusCode = a.run(req, w, route, args)
+			if isBreak {
+				return
+			}
+			isFind = true
 		}
-	} else {
+	}
+	if !isFind {
 		for _, route := range a.Routes {
 			cr := route.CompiledRegexp
 
 			//if the methods don't match, skip this handler (except HEAD can be used in place of GET)
-			allowMethod := Ternary(req.Method == "HEAD", "GET", req.Method).(string)
 			if _, ok := route.HttpMethods[allowMethod]; !ok {
 				continue
 			}
@@ -895,21 +905,25 @@ func (app *App) Redirect(w http.ResponseWriter, requestPath, url string, status 
 	return nil
 }
 
-func (app *App) Nodes() (r map[string][]string) {
-	r = make(map[string][]string)
-	for _, v := range app.Routes {
-		name := v.HandlerElement.Name()
+func (app *App) Nodes() (r map[string]map[string]string) {
+	r = make(map[string]map[string]string)
+	for _, val := range app.Routes {
+		name := val.HandlerElement.Name()
 		if _, ok := r[name]; !ok {
-			r[name] = make([]string, 0)
+			r[name] = make(map[string]string)
 		}
-		r[name] = append(r[name], v.HandlerMethod)
+		for k, _ := range val.HttpMethods {
+			r[name][k] = val.HandlerMethod
+		}
 	}
-	for _, v := range app.RoutesEq {
-		name := v.HandlerElement.Name()
-		if _, ok := r[name]; !ok {
-			r[name] = make([]string, 0)
+	for _, vals := range app.RoutesEq {
+		for k, v := range vals {
+			name := v.HandlerElement.Name()
+			if _, ok := r[name]; !ok {
+				r[name] = make(map[string]string)
+			}
+			r[name][k] = v.HandlerMethod
 		}
-		r[name] = append(r[name], v.HandlerMethod)
 	}
 	return
 }
