@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/coscms/httpsession/csession"
+	"github.com/lunny/csession"
 )
 
 type handler struct {

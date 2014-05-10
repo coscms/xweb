@@ -13,6 +13,30 @@ type sessionNode struct {
 	last time.Time
 }
 
+func (node *sessionNode) Get(key string) interface{} {
+	node.lock.RLock()
+	v := node.kvs[key]
+	node.lock.RUnlock()
+	node.lock.Lock()
+	node.last = time.Now()
+	node.lock.Unlock()
+	return v
+}
+
+func (node *sessionNode) Set(key string, v interface{}) {
+	node.lock.Lock()
+	node.kvs[key] = v
+	node.last = time.Now()
+	node.lock.Unlock()
+}
+
+func (node *sessionNode) Del(key string) {
+	node.lock.Lock()
+	delete(node.kvs, key)
+	node.last = time.Now()
+	node.lock.Unlock()
+}
+
 type MemoryStore struct {
 	lock       sync.RWMutex
 	nodes      map[Id]*sessionNode
@@ -41,35 +65,22 @@ func (store *MemoryStore) Get(id Id, key string) interface{} {
 		return nil
 	}
 
-	node.lock.Lock()
-	node.last = time.Now()
-	node.lock.Unlock()
-
-	node.lock.RLock()
-	v, ok := node.kvs[key]
-	node.lock.RUnlock()
-
-	if !ok {
-		return nil
-	}
-	return v
+	return node.Get(key)
 }
 
 func (store *MemoryStore) Set(id Id, key string, value interface{}) {
-	store.lock.Lock()
+	store.lock.RLock()
 	node, ok := store.nodes[id]
+	store.lock.RUnlock()
 	if !ok {
+		store.lock.Lock()
 		node = &sessionNode{kvs: make(map[string]interface{}), last: time.Now()}
 		node.kvs[key] = value
 		store.nodes[id] = node
 		store.lock.Unlock()
-	} else {
-		store.lock.Unlock()
-		node.lock.Lock()
-		node.last = time.Now()
-		node.kvs[key] = value
-		node.lock.Unlock()
 	}
+
+	node.Set(key, value)
 }
 
 func (store *MemoryStore) Add(id Id) {
@@ -84,9 +95,7 @@ func (store *MemoryStore) Del(id Id, key string) bool {
 	node, ok := store.nodes[id]
 	store.lock.RUnlock()
 	if ok {
-		node.lock.Lock()
-		delete(node.kvs, key)
-		node.lock.Unlock()
+		node.Del(key)
 	}
 	return true
 }
@@ -116,17 +125,16 @@ func (store *MemoryStore) Run() error {
 //
 func (store *MemoryStore) GC() {
 	store.lock.Lock()
-	defer store.lock.Unlock()
-	var i = 0
+	var i, j int
 	for k, v := range store.nodes {
-		if i > 20 {
+		if j > 20 || i > 5 {
 			break
 		}
 		if time.Now().Sub(v.last) > store.expire {
-			store.lock.Lock()
 			delete(store.nodes, k)
-			store.lock.Unlock()
 			i = i + 1
 		}
+		j = j + 1
 	}
+	store.lock.Unlock()
 }
