@@ -40,13 +40,19 @@ func (node *sessionNode) Del(key string) {
 type MemoryStore struct {
 	lock       sync.RWMutex
 	nodes      map[Id]*sessionNode
-	expire     time.Duration
+	maxAge     time.Duration
 	GcInterval time.Duration
 }
 
-func NewMemoryStore(expire time.Duration) *MemoryStore {
+func NewMemoryStore(maxAge time.Duration) *MemoryStore {
 	return &MemoryStore{nodes: make(map[Id]*sessionNode),
-		expire: expire, GcInterval: 10 * time.Second}
+		maxAge: maxAge, GcInterval: 10 * time.Second}
+}
+
+func (store *MemoryStore) SetMaxAge(maxAge time.Duration) {
+	store.lock.Lock()
+	store.maxAge = maxAge
+	store.lock.Unlock()
 }
 
 func (store *MemoryStore) Get(id Id, key string) interface{} {
@@ -57,7 +63,7 @@ func (store *MemoryStore) Get(id Id, key string) interface{} {
 		return nil
 	}
 
-	if time.Now().Sub(node.last) > store.expire {
+	if store.maxAge > 0 && time.Now().Sub(node.last) > store.maxAge {
 		// lazy DELETE expire
 		store.lock.Lock()
 		delete(store.nodes, id)
@@ -125,16 +131,20 @@ func (store *MemoryStore) Run() error {
 //
 func (store *MemoryStore) GC() {
 	store.lock.Lock()
+	defer store.lock.Unlock()
+	if store.maxAge == 0 {
+		return
+	}
 	var i, j int
 	for k, v := range store.nodes {
 		if j > 20 || i > 5 {
 			break
 		}
-		if time.Now().Sub(v.last) > store.expire {
+		if time.Now().Sub(v.last) > store.maxAge {
 			delete(store.nodes, k)
 			i = i + 1
 		}
 		j = j + 1
 	}
-	store.lock.Unlock()
+
 }

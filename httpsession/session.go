@@ -15,11 +15,13 @@ type Store interface {
 	Clear(id Id) bool
 	Add(id Id)
 	Exist(id Id) bool
+	SetMaxAge(maxAge time.Duration)
 	Run() error
 }
 
 type Session struct {
 	id      Id
+	maxAge  int
 	manager *Manager
 }
 
@@ -47,13 +49,16 @@ func (session *Session) IsValid() bool {
 	return session.manager.generator.IsValid(session.id)
 }
 
+func (session *Session) SetMaxAge(maxAge int) {
+}
+
 const (
-	DefaultExpireTime = 30 * time.Minute
+	DefaultMaxAge = 30 * time.Minute
 )
 
 type Manager struct {
 	store                  Store
-	MaxAge                 int
+	maxAge                 time.Duration
 	Path                   string
 	generator              IdGenerator
 	transfer               Transfer
@@ -63,11 +68,11 @@ type Manager struct {
 }
 
 func Default() *Manager {
-	store := NewMemoryStore(DefaultExpireTime)
+	store := NewMemoryStore(DefaultMaxAge)
 	key := string(GenRandKey(16))
 	return NewManager(store,
 		NewSha1Generator(key),
-		NewCookieTransfer("SESSIONID", DefaultExpireTime))
+		NewCookieTransfer("SESSIONID", DefaultMaxAge, false, "/"))
 }
 
 func NewManager(store Store, gen IdGenerator, transfer Transfer) *Manager {
@@ -76,6 +81,12 @@ func NewManager(store Store, gen IdGenerator, transfer Transfer) *Manager {
 		generator: gen,
 		transfer:  transfer,
 	}
+}
+
+func (manager *Manager) SetMaxAge(maxAge time.Duration) {
+	manager.maxAge = maxAge
+	manager.transfer.SetMaxAge(maxAge)
+	manager.store.SetMaxAge(maxAge)
 }
 
 func (manager *Manager) Session(req *http.Request, rw http.ResponseWriter) *Session {

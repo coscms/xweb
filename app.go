@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"html/template"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"path"
@@ -18,6 +17,7 @@ import (
 	"time"
 
 	"github.com/coscms/xweb/httpsession"
+	"github.com/coscms/xweb/log"
 )
 
 const (
@@ -61,17 +61,9 @@ type AppConfig struct {
 	CacheTemplates    bool
 	ReloadTemplates   bool
 	CheckXrsf         bool
-	SessionTimeout    int64
+	SessionTimeout    time.Duration
 	FormMapToStruct   bool //[SWH|+]
 	EnableHttpCache   bool //[SWH|+]
-
-	//[SWH|+] On/Off Log
-	EnableTraceLog    bool
-	EnableDebugLog    bool
-	EnableInfoLog     bool
-	EnableWarnLog     bool
-	EnableErrorLog    bool
-	EnableCriticalLog bool
 }
 
 type Route struct {
@@ -106,13 +98,6 @@ func NewApp(args ...string) *App {
 			ReloadTemplates:   true,
 			CheckXrsf:         true,
 			FormMapToStruct:   true,
-
-			EnableTraceLog:    true,
-			EnableDebugLog:    true,
-			EnableInfoLog:     true,
-			EnableWarnLog:     true,
-			EnableErrorLog:    true,
-			EnableCriticalLog: true,
 		},
 		Config:       map[string]interface{}{},
 		Actions:      map[reflect.Type]string{},
@@ -137,6 +122,7 @@ func (a *App) initApp() {
 
 	if a.AppConfig.SessionOn {
 		a.SessionManager = httpsession.Default()
+		a.SessionManager.SetMaxAge(a.AppConfig.SessionTimeout)
 		a.SessionManager.Run()
 	}
 
@@ -204,44 +190,58 @@ func (app *App) AddFilter(filter Filter) {
 	app.filters = append(app.filters, filter)
 }
 
-func (app *App) log(color int, format string, params ...interface{}) {
-	app.Server.osLogger(app.Logger, color, "["+app.Name+"] "+format, params...)
+func (app *App) Debug(params ...interface{}) {
+	args := append([]interface{}{"[" + app.Name + "]"}, params...)
+	app.Logger.Debug(args...)
 }
 
-func (app *App) Trace(format string, params ...interface{}) {
-	if app.AppConfig.EnableTraceLog {
-		app.log(ForeCyan, "[Trace] "+format, params...)
-	}
+func (app *App) Info(params ...interface{}) {
+	args := append([]interface{}{"[" + app.Name + "]"}, params...)
+	app.Logger.Info(args...)
 }
 
-func (app *App) Debug(format string, params ...interface{}) {
-	if app.AppConfig.EnableDebugLog {
-		app.log(ForeBlue, "[Debug] "+format, params...)
-	}
+func (app *App) Warn(params ...interface{}) {
+	args := append([]interface{}{"[" + app.Name + "]"}, params...)
+	app.Logger.Warn(args...)
 }
 
-func (app *App) Info(format string, params ...interface{}) {
-	if app.AppConfig.EnableInfoLog {
-		app.log(ForeGreen, "[Info] "+format, params...)
-	}
+func (app *App) Error(params ...interface{}) {
+	args := append([]interface{}{"[" + app.Name + "]"}, params...)
+	app.Logger.Error(args...)
 }
 
-func (app *App) Warn(format string, params ...interface{}) {
-	if app.AppConfig.EnableWarnLog {
-		app.log(ForeYellow, "[Warn] "+format, params...)
-	}
+func (app *App) Fatal(params ...interface{}) {
+	args := append([]interface{}{"[" + app.Name + "]"}, params...)
+	app.Logger.Fatal(args...)
 }
 
-func (app *App) Error(format string, params ...interface{}) {
-	if app.AppConfig.EnableErrorLog {
-		app.log(ForeRed, "[Error] "+format, params...)
-	}
+func (app *App) Panic(params ...interface{}) {
+	args := append([]interface{}{"[" + app.Name + "]"}, params...)
+	app.Logger.Panic(args...)
 }
 
-func (app *App) Critical(format string, params ...interface{}) {
-	if app.AppConfig.EnableCriticalLog {
-		app.log(ForePurple, "[Critical] "+format, params...)
-	}
+func (app *App) Debugf(format string, params ...interface{}) {
+	app.Logger.Debugf("["+app.Name+"] "+format, params...)
+}
+
+func (app *App) Infof(format string, params ...interface{}) {
+	app.Logger.Infof("["+app.Name+"] "+format, params...)
+}
+
+func (app *App) Warnf(format string, params ...interface{}) {
+	app.Logger.Warnf("["+app.Name+"] "+format, params...)
+}
+
+func (app *App) Errorf(format string, params ...interface{}) {
+	app.Logger.Errorf("["+app.Name+"] "+format, params...)
+}
+
+func (app *App) Fatalf(format string, params ...interface{}) {
+	app.Logger.Fatalf("["+app.Name+"] "+format, params...)
+}
+
+func (app *App) Panicf(format string, params ...interface{}) {
+	app.Logger.Panicf("["+app.Name+"] "+format, params...)
 }
 
 func (app *App) filter(w http.ResponseWriter, req *http.Request) bool {
@@ -256,7 +256,7 @@ func (app *App) filter(w http.ResponseWriter, req *http.Request) bool {
 func (a *App) addRoute(r string, methods map[string]bool, t reflect.Type, handler string) {
 	cr, err := regexp.Compile(r)
 	if err != nil {
-		a.Error("Error in route regex %q: %s", r, err)
+		a.Errorf("Error in route regex %q: %s", r, err)
 		return
 	}
 	a.Routes = append(a.Routes, Route{Path: r, CompiledRegexp: cr, HttpMethods: methods, HandlerMethod: handler, HandlerElement: t})
@@ -345,9 +345,9 @@ func (a *App) routeHandler(req *http.Request, w http.ResponseWriter) {
 			statusCode = 200
 		}
 		if statusCode >= 200 && statusCode < 400 {
-			a.Info("%s %d %s", req.Method, statusCode, requestPath)
+			a.Info(req.Method, statusCode, requestPath)
 		} else {
-			a.Error("%s %d %s", req.Method, statusCode, requestPath)
+			a.Error(req.Method, statusCode, requestPath)
 		}
 	}()
 
@@ -566,7 +566,7 @@ func (a *App) run(req *http.Request, w http.ResponseWriter, route Route, args []
 		content = sval.Interface().([]byte)
 	} else if err, ok := sval.Interface().(error); ok {
 		if err != nil {
-			a.Error("Error : %v", err)
+			a.Error("Error:", err)
 			a.error(w, 500, "Server Error")
 			statusCode = 500
 		}

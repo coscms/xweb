@@ -9,6 +9,7 @@ import (
 
 // Transfer provide and set sessionid
 type Transfer interface {
+	SetMaxAge(maxAge time.Duration)
 	Get(req *http.Request) (Id, error)
 	Set(req *http.Request, rw http.ResponseWriter, id Id)
 	Clear(rw http.ResponseWriter)
@@ -16,13 +17,25 @@ type Transfer interface {
 
 // CookieRetriever provide sessionid from cookie
 type CookieTransfer struct {
-	name   string
-	expire time.Duration
-	lock   sync.Mutex
+	name     string
+	maxAge   time.Duration
+	lock     sync.Mutex
+	secure   bool
+	rootPath string
+	domain   string
 }
 
-func NewCookieTransfer(name string, expire time.Duration) *CookieTransfer {
-	return &CookieTransfer{name: name, expire: expire}
+func NewCookieTransfer(name string, maxAge time.Duration, secure bool, rootPath string) *CookieTransfer {
+	return &CookieTransfer{
+		name:     name,
+		maxAge:   maxAge,
+		secure:   secure,
+		rootPath: rootPath,
+	}
+}
+
+func (transfer *CookieTransfer) SetMaxAge(maxAge time.Duration) {
+	transfer.maxAge = maxAge
 }
 
 func (transfer *CookieTransfer) Get(req *http.Request) (Id, error) {
@@ -51,10 +64,13 @@ func (transfer *CookieTransfer) Set(req *http.Request, rw http.ResponseWriter, i
 		cookie = &http.Cookie{
 			Name:     transfer.name,
 			Value:    sid,
-			MaxAge:   int(transfer.expire / time.Second),
-			Path:     "/",
+			Path:     transfer.rootPath,
+			Domain:   transfer.domain,
 			HttpOnly: true,
-			//Secure:   true,
+			Secure:   transfer.secure,
+		}
+		if transfer.maxAge > 0 {
+			cookie.Expires = time.Now().Add(transfer.maxAge)
 		}
 
 		req.AddCookie(cookie)
@@ -67,15 +83,17 @@ func (transfer *CookieTransfer) Set(req *http.Request, rw http.ResponseWriter, i
 func (transfer *CookieTransfer) Clear(rw http.ResponseWriter) {
 	cookie := http.Cookie{
 		Name:     transfer.name,
-		Path:     "/",
+		Path:     transfer.rootPath,
+		Domain:   transfer.domain,
 		HttpOnly: true,
-		Expires:  time.Now(),
+		Secure:   transfer.secure,
+		Expires:  time.Date(0, 1, 1, 0, 0, 0, 0, time.Local),
 		MaxAge:   -1,
 	}
 	http.SetCookie(rw, &cookie)
 }
 
-var _ Transfer = NewCookieTransfer("test", DefaultExpireTime)
+var _ Transfer = NewCookieTransfer("test", 0, false, "/")
 
 // CookieRetriever provide sessionid from url
 /*type UrlTransfer struct {

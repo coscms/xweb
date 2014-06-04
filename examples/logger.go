@@ -1,9 +1,9 @@
 package main
 
 import (
-	"log"
 	"os"
 
+	"github.com/coscms/xweb/log"
 	"github.com/coscms/xweb"
 )
 

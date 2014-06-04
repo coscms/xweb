@@ -1,2 +1,9 @@
-[target]
-path=github.com/coscms/xweb
+[deps]
+github.com/coscms/xweb/httpsession = 
+github.com/coscms/xweb/log = 
+github.com/coscms/xweb/uuid = 
+github.com/howeyc/fsnotify = 
+
+[res]
+include = 
+
