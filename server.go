@@ -61,7 +61,7 @@ func NewServer(args ...string) *Server {
 	}
 	Servers[s.Name] = s //[SWH|+]
 
-	s.SetLogger(log.New(os.Stdout, "", log.Ldate|log.Ltime|log.Llongcolor))
+	s.SetLogger(log.New(os.Stdout, "", log.Ldefault()))
 
 	app := NewApp("/", "root") //[SWH|+] ,"root"
 	s.AddApp(app)
@@ -109,7 +109,15 @@ func (s *Server) AddFilter(filter Filter) {
 }
 
 func (s *Server) AddConfig(name string, value interface{}) {
-	s.RootApp.Config[name] = value
+	s.RootApp.SetConfig(name, value)
+}
+
+func (s *Server) SetConfig(name string, value interface{}) {
+	s.RootApp.SetConfig(name, value)
+}
+
+func (s *Server) GetConfig(name string) interface{} {
+	return s.RootApp.GetConfig(name)
 }
 
 func (s *Server) error(w http.ResponseWriter, status int, content string) error {

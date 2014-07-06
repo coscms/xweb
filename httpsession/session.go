@@ -2,26 +2,12 @@ package httpsession
 
 import (
 	"net/http"
-	"sync"
 	"time"
 )
 
-type Id string
-
-type Store interface {
-	Get(id Id, key string) interface{}
-	Set(id Id, key string, value interface{})
-	Del(id Id, key string) bool
-	Clear(id Id) bool
-	Add(id Id)
-	Exist(id Id) bool
-	SetMaxAge(maxAge time.Duration)
-	Run() error
-}
-
 type Session struct {
 	id      Id
-	maxAge  int
+	maxAge  time.Duration
 	manager *Manager
 }
 
@@ -49,87 +35,10 @@ func (session *Session) IsValid() bool {
 	return session.manager.generator.IsValid(session.id)
 }
 
-func (session *Session) SetMaxAge(maxAge int) {
+func (session *Session) SetMaxAge(maxAge time.Duration) {
+	session.maxAge = maxAge
 }
 
-const (
-	DefaultMaxAge = 30 * time.Minute
-)
-
-type Manager struct {
-	store                  Store
-	maxAge                 time.Duration
-	Path                   string
-	generator              IdGenerator
-	transfer               Transfer
-	beforeReleaseListeners map[BeforeReleaseListener]bool
-	afterCreatedListeners  map[AfterCreatedListener]bool
-	lock                   sync.Mutex
-}
-
-func Default() *Manager {
-	store := NewMemoryStore(DefaultMaxAge)
-	key := string(GenRandKey(16))
-	return NewManager(store,
-		NewSha1Generator(key),
-		NewCookieTransfer("SESSIONID", DefaultMaxAge, false, "/"))
-}
-
-func NewManager(store Store, gen IdGenerator, transfer Transfer) *Manager {
-	return &Manager{
-		store:     store,
-		generator: gen,
-		transfer:  transfer,
-	}
-}
-
-func (manager *Manager) SetMaxAge(maxAge time.Duration) {
-	manager.maxAge = maxAge
-	manager.transfer.SetMaxAge(maxAge)
-	manager.store.SetMaxAge(maxAge)
-}
-
-func (manager *Manager) Session(req *http.Request, rw http.ResponseWriter) *Session {
-	manager.lock.Lock()
-	defer manager.lock.Unlock()
-
-	id, err := manager.transfer.Get(req)
-	if err != nil {
-		// TODO:
-		println("error:", err.Error())
-		return nil
-	}
-
-	if !manager.generator.IsValid(id) /*|| !manager.store.Exist(id)*/ {
-		id = manager.generator.Gen(req)
-		manager.transfer.Set(req, rw, id)
-		manager.store.Add(id)
-	}
-
-	session := &Session{id: id, manager: manager}
-	// is exist?
-	manager.afterCreated(session)
-	return session
-}
-
-func (manager *Manager) Invalidate(rw http.ResponseWriter, session *Session) {
-	manager.beforeReleased(session)
-	manager.store.Clear(session.id)
-	manager.transfer.Clear(rw)
-}
-
-func (manager *Manager) afterCreated(session *Session) {
-	for listener, _ := range manager.afterCreatedListeners {
-		listener.OnAfterCreated(session)
-	}
-}
-
-func (manager *Manager) beforeReleased(session *Session) {
-	for listener, _ := range manager.beforeReleaseListeners {
-		listener.OnBeforeRelease(session)
-	}
-}
-
-func (manager *Manager) Run() error {
-	return manager.store.Run()
+func NewSession(id Id, maxAge time.Duration, manager *Manager) *Session {
+	return &Session{id: id, maxAge: manager.maxAge, manager: manager}
 }

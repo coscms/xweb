@@ -50,7 +50,6 @@ func (transfer *CookieTransfer) Get(req *http.Request) (Id, error) {
 		return Id(""), nil
 	}
 	id, _ := url.QueryUnescape(cookie.Value)
-	//id := cookie.Value
 	return Id(id), nil
 }
 
@@ -58,7 +57,6 @@ func (transfer *CookieTransfer) Set(req *http.Request, rw http.ResponseWriter, i
 	sid := url.QueryEscape(string(id))
 	transfer.lock.Lock()
 	defer transfer.lock.Unlock()
-	//sid := string(id)
 	cookie, _ := req.Cookie(transfer.name)
 	if cookie == nil {
 		cookie = &http.Cookie{
@@ -70,12 +68,17 @@ func (transfer *CookieTransfer) Set(req *http.Request, rw http.ResponseWriter, i
 			Secure:   transfer.secure,
 		}
 		if transfer.maxAge > 0 {
-			cookie.Expires = time.Now().Add(transfer.maxAge)
+			cookie.MaxAge = int(transfer.maxAge / time.Second)
+			//cookie.Expires = time.Now().Add(transfer.maxAge).UTC()
 		}
 
 		req.AddCookie(cookie)
 	} else {
 		cookie.Value = sid
+		if transfer.maxAge > 0 {
+			cookie.MaxAge = int(transfer.maxAge / time.Second)
+			//cookie.Expires = time.Now().Add(transfer.maxAge)
+		}
 	}
 	http.SetCookie(rw, cookie)
 }
