@@ -15,6 +15,10 @@ func (session *Session) Id() Id {
 	return session.id
 }
 
+func (session *Session) SetId(id Id) {
+	session.id = id
+}
+
 func (session *Session) Get(key string) interface{} {
 	return session.manager.store.Get(session.id, key)
 }
