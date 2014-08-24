@@ -56,17 +56,40 @@ Struct Tag Use:
 	// functions divide with ";"
 	// parameters in parentheses "()" and divide with ","
 	// Match function's pattern string must in "//"
-	type user struct {
+	type User struct {
 		Id   int
 		Name string `valid:"Required;Match(/^(test)?\\w*@;com$/)"`
 		Age  int    `valid:"Required;Range(1, 140)"`
 	}
+	type Profile struct {
+		Id   int
+		Email string `valid:"Required;Match(/^\\w+@coscms\\.com$/)"`
+		Addr  string `valid:"Required"`
+	}
+	type Group struct {
+		Id   int
+		User
+		*Profile
+	}
 
 	func main() {
 		valid := Validation{}
-		u := user{Name: "test", Age: 40}
+		u := User{Name: "test", Age: 40}
 		b, err := valid.Valid(u) //检查所有字段
 		//b, err := valid.Valid(u, "Name", "Age") //检查指定字段：Name和Age
+		if err != nil {
+			// handle error
+		}
+		if !b {
+			// validation does not pass
+			// blabla...
+		}
+
+		valid.Clear()
+
+		u := Group{User:User{Name: "test", Age: 40},Profile:&Profile{Email:"test@coscms.com",Addr:"address"}}
+		b, err := valid.Valid(u) //检查所有字段
+		//b, err := valid.Valid(u, "User.Name", "Profile.Email") //检查指定字段
 		if err != nil {
 			// handle error
 		}
