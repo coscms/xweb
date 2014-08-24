@@ -65,7 +65,8 @@ Struct Tag Use:
 	func main() {
 		valid := Validation{}
 		u := user{Name: "test", Age: 40}
-		b, err := valid.Valid(u)
+		b, err := valid.Valid(u) //检查所有字段
+		//b, err := valid.Valid(u, "Name", "Age") //检查指定字段：Name和Age
 		if err != nil {
 			// handle error
 		}
