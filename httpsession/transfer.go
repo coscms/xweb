@@ -17,29 +17,29 @@ type Transfer interface {
 
 // CookieRetriever provide sessionid from cookie
 type CookieTransfer struct {
-	name     string
-	maxAge   time.Duration
-	lock     sync.Mutex
-	secure   bool
-	rootPath string
-	domain   string
+	Name     string
+	MaxAge   time.Duration
+	Lock     sync.Mutex
+	Secure   bool
+	RootPath string
+	Domain   string
 }
 
 func NewCookieTransfer(name string, maxAge time.Duration, secure bool, rootPath string) *CookieTransfer {
 	return &CookieTransfer{
-		name:     name,
-		maxAge:   maxAge,
-		secure:   secure,
-		rootPath: rootPath,
+		Name:     name,
+		MaxAge:   maxAge,
+		Secure:   secure,
+		RootPath: rootPath,
 	}
 }
 
 func (transfer *CookieTransfer) SetMaxAge(maxAge time.Duration) {
-	transfer.maxAge = maxAge
+	transfer.MaxAge = maxAge
 }
 
 func (transfer *CookieTransfer) Get(req *http.Request) (Id, error) {
-	cookie, err := req.Cookie(transfer.name)
+	cookie, err := req.Cookie(transfer.Name)
 	if err != nil {
 		if err == http.ErrNoCookie {
 			return "", nil
@@ -55,28 +55,28 @@ func (transfer *CookieTransfer) Get(req *http.Request) (Id, error) {
 
 func (transfer *CookieTransfer) Set(req *http.Request, rw http.ResponseWriter, id Id) {
 	sid := url.QueryEscape(string(id))
-	transfer.lock.Lock()
-	defer transfer.lock.Unlock()
-	cookie, _ := req.Cookie(transfer.name)
+	transfer.Lock.Lock()
+	defer transfer.Lock.Unlock()
+	cookie, _ := req.Cookie(transfer.Name)
 	if cookie == nil {
 		cookie = &http.Cookie{
-			Name:     transfer.name,
+			Name:     transfer.Name,
 			Value:    sid,
-			Path:     transfer.rootPath,
-			Domain:   transfer.domain,
+			Path:     transfer.RootPath,
+			Domain:   transfer.Domain,
 			HttpOnly: true,
-			Secure:   transfer.secure,
+			Secure:   transfer.Secure,
 		}
-		if transfer.maxAge > 0 {
-			cookie.MaxAge = int(transfer.maxAge / time.Second)
+		if transfer.MaxAge > 0 {
+			cookie.MaxAge = int(transfer.MaxAge / time.Second)
 			//cookie.Expires = time.Now().Add(transfer.maxAge).UTC()
 		}
 
 		req.AddCookie(cookie)
 	} else {
 		cookie.Value = sid
-		if transfer.maxAge > 0 {
-			cookie.MaxAge = int(transfer.maxAge / time.Second)
+		if transfer.MaxAge > 0 {
+			cookie.MaxAge = int(transfer.MaxAge / time.Second)
 			//cookie.Expires = time.Now().Add(transfer.maxAge)
 		}
 	}
@@ -85,11 +85,11 @@ func (transfer *CookieTransfer) Set(req *http.Request, rw http.ResponseWriter, i
 
 func (transfer *CookieTransfer) Clear(rw http.ResponseWriter) {
 	cookie := http.Cookie{
-		Name:     transfer.name,
-		Path:     transfer.rootPath,
-		Domain:   transfer.domain,
+		Name:     transfer.Name,
+		Path:     transfer.RootPath,
+		Domain:   transfer.Domain,
 		HttpOnly: true,
-		Secure:   transfer.secure,
+		Secure:   transfer.Secure,
 		Expires:  time.Date(0, 1, 1, 0, 0, 0, 0, time.Local),
 		MaxAge:   -1,
 	}
@@ -118,3 +118,29 @@ var (
 	_ Transfer = NewUrlTransfer()
 )
 */
+
+//for SWFUpload ...
+func NewCookieUrlTransfer(name string, maxAge time.Duration, secure bool, rootPath string) *CookieUrlTransfer {
+	return &CookieUrlTransfer{
+		CookieTransfer: CookieTransfer{
+			Name:     name,
+			MaxAge:   maxAge,
+			Secure:   secure,
+			RootPath: rootPath,
+		},
+	}
+}
+
+type CookieUrlTransfer struct {
+	CookieTransfer
+}
+
+func (transfer *CookieUrlTransfer) Get(req *http.Request) (Id, error) {
+	sessionId := req.URL.Query().Get(transfer.Name)
+	if sessionId != "" {
+		sessionId, _ = url.QueryUnescape(sessionId)
+		return Id(sessionId), nil
+	}
+
+	return transfer.CookieTransfer.Get(req)
+}
