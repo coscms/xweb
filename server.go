@@ -37,9 +37,10 @@ var ServerNumber uint = 0
 // Server represents a xweb server.
 type Server struct {
 	Config         *ServerConfig
+	AppsPath       map[string]*App
 	Apps           map[string]*App
-	AppName        map[string]string //[SWH|+]
-	Name           string            //[SWH|+]
+	AppsNamePath   map[string]string
+	Name           string
 	SessionManager *httpsession.Manager
 	RootApp        *App
 	Logger         *log.Logger
@@ -57,13 +58,14 @@ func NewServer(args ...string) *Server {
 		ServerNumber++
 	}
 	s := &Server{
-		Config:  Config,
-		Env:     map[string]interface{}{},
-		Apps:    map[string]*App{},
-		AppName: map[string]string{},
-		Name:    name,
+		Config:       Config,
+		Env:          map[string]interface{}{},
+		AppsPath:     map[string]*App{},
+		Apps:         map[string]*App{},
+		AppsNamePath: map[string]string{},
+		Name:         name,
 	}
-	Servers[s.Name] = s //[SWH|+]
+	Servers[s.Name] = s
 
 	s.SetLogger(log.New(os.Stdout, "", log.Ldefault()))
 
@@ -74,12 +76,10 @@ func NewServer(args ...string) *Server {
 
 func (s *Server) AddApp(a *App) {
 	a.BasePath = strings.TrimRight(a.BasePath, "/") + "/"
-	s.Apps[a.BasePath] = a
+	s.AppsPath[a.BasePath] = a
 
-	//[SWH|+]
-	if a.Name != "" {
-		s.AppName[a.Name] = a.BasePath
-	}
+	s.Apps[a.Name] = a
+	s.AppsNamePath[a.Name] = a.BasePath
 
 	a.Server = s
 	a.Logger = s.Logger
@@ -134,7 +134,7 @@ func (s *Server) initServer() {
 		s.Config.Profiler = true
 	}
 
-	for _, app := range s.Apps {
+	for _, app := range s.AppsPath {
 		app.initApp()
 	}
 }
@@ -161,7 +161,7 @@ func (s *Server) Process(w http.ResponseWriter, req *http.Request) {
 	if req.URL.Path[0] != '/' {
 		req.URL.Path = "/" + req.URL.Path
 	}
-	for _, app := range s.Apps {
+	for _, app := range s.AppsPath {
 		if app != s.RootApp && strings.HasPrefix(req.URL.Path, app.BasePath) {
 			app.routeHandler(req, w)
 			return
@@ -295,9 +295,9 @@ func (s *Server) SetStaticDir(path string) {
 }
 
 func (s *Server) App(name string) *App {
-	path, ok := s.AppName[name]
+	v, ok := s.Apps[name]
 	if ok {
-		return s.Apps[path]
+		return v
 	}
 	return nil
 }
