@@ -214,12 +214,13 @@ var (
 )
 
 type TemplateMgr struct {
-	Caches   map[string][]byte
-	mutex    *sync.Mutex
-	RootDir  string
-	Ignores  map[string]bool
-	IsReload bool
-	app      *App
+	Caches       map[string][]byte
+	mutex        *sync.Mutex
+	RootDir      string
+	Ignores      map[string]bool
+	IsReload     bool
+	app          *App
+	Preprocessor func([]byte) []byte
 }
 
 func (self *TemplateMgr) Moniter(rootDir string) error {
@@ -336,6 +337,7 @@ func (self *TemplateMgr) CacheAll(rootDir string) error {
 func (self *TemplateMgr) Init(app *App, rootDir string, reload bool) error {
 	self.RootDir = rootDir
 	self.Caches = make(map[string][]byte)
+	self.Ignores = make(map[string]bool)
 	self.mutex = &sync.Mutex{}
 	self.app = app
 	if dirExists(rootDir) {
@@ -344,6 +346,10 @@ func (self *TemplateMgr) Init(app *App, rootDir string, reload bool) error {
 		if reload {
 			go self.Moniter(rootDir)
 		}
+	}
+
+	if len(self.Ignores) == 0 {
+		self.Ignores["*.tmp"] = false
 	}
 
 	return nil
@@ -366,6 +372,9 @@ func (self *TemplateMgr) GetTemplate(tmpl string) ([]byte, error) {
 }
 
 func (self *TemplateMgr) CacheTemplate(tmpl string, content []byte) {
+	if self.Preprocessor != nil {
+		content = self.Preprocessor(content)
+	}
 	self.mutex.Lock()
 	defer self.mutex.Unlock()
 	tmpl = strings.Replace(tmpl, "\\", "/", -1)

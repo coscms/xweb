@@ -30,6 +30,7 @@ Please visit [examples](https://github.com/coscms/xweb/tree/master/examples) fol
 
 ## Case
 
+* [xorm.io](http://xorm.io)
 * [Godaily.org](http://godaily.org)
 
 ## Documentation

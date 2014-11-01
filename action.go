@@ -216,6 +216,10 @@ func (c *Action) Cookie(key string) string {
 
 // Body returns the raw request body data as bytes.
 func (c *Action) Body() []byte {
+	if len(c.RequestBody) > 0 {
+		return c.RequestBody
+	}
+
 	requestbody, _ := ioutil.ReadAll(c.Request.Body)
 	c.Request.Body.Close()
 	bf := bytes.NewBuffer(requestbody)
@@ -715,6 +719,11 @@ func (c *Action) SetHeader(key string, value string) {
 
 // add a name value for template
 func (c *Action) AddTmplVar(name string, varOrFunc interface{}) {
+	if varOrFunc == nil {
+		c.T[name] = varOrFunc
+		return
+	}
+
 	if reflect.ValueOf(varOrFunc).Type().Kind() == reflect.Func {
 		c.f[name] = varOrFunc
 	} else {
@@ -749,6 +758,11 @@ func (c *Action) ServeXml(obj interface{}) {
 	c.SetHeader("Content-Length", strconv.Itoa(len(content)))
 	c.ResponseWriter.Header().Set("Content-Type", "application/xml")
 	c.ResponseWriter.Write(content)
+}
+
+func (c *Action) ServeFile(fpath string) {
+	http.ServeFile(c.ResponseWriter, c.Request, fpath)
+	//c.App.TryServingFile(fpath, c.Request, c.ResponseWriter)
 }
 
 func (c *Action) GetSlice(key string) []string {

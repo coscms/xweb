@@ -37,7 +37,6 @@ var ServerNumber uint = 0
 // Server represents a xweb server.
 type Server struct {
 	Config         *ServerConfig
-	AppsPath       map[string]*App
 	Apps           map[string]*App
 	AppsNamePath   map[string]string
 	Name           string
@@ -58,28 +57,28 @@ func NewServer(args ...string) *Server {
 		ServerNumber++
 	}
 	s := &Server{
-		Config:       Config,
-		Env:          map[string]interface{}{},
-		AppsPath:     map[string]*App{},
-		Apps:         map[string]*App{},
+		Config:  Config,
+		Env:     map[string]interface{}{},
+		Apps:    map[string]*App{},
 		AppsNamePath: map[string]string{},
-		Name:         name,
+		Name:    name,
 	}
 	Servers[s.Name] = s
 
 	s.SetLogger(log.New(os.Stdout, "", log.Ldefault()))
 
-	app := NewApp("/", "root") //[SWH|+] ,"root"
+	app := NewApp("/", "root")
 	s.AddApp(app)
 	return s
 }
 
 func (s *Server) AddApp(a *App) {
 	a.BasePath = strings.TrimRight(a.BasePath, "/") + "/"
-	s.AppsPath[a.BasePath] = a
+	s.Apps[a.BasePath] = a
 
-	s.Apps[a.Name] = a
-	s.AppsNamePath[a.Name] = a.BasePath
+	if a.Name != "" {
+		s.AppsNamePath[a.Name] = a.BasePath
+	}
 
 	a.Server = s
 	a.Logger = s.Logger
@@ -134,7 +133,7 @@ func (s *Server) initServer() {
 		s.Config.Profiler = true
 	}
 
-	for _, app := range s.AppsPath {
+	for _, app := range s.Apps {
 		app.initApp()
 	}
 }
@@ -148,7 +147,7 @@ func (s *Server) ServeHTTP(c http.ResponseWriter, req *http.Request) {
 // non-root app's route will override root app's if there is same path
 func (s *Server) Process(w http.ResponseWriter, req *http.Request) {
 	var result bool = true
-	_, _ = XHook.Call("BeforeProcess", &result, s, w, req) //[SWH|+]call hook
+	_, _ = XHook.Call("BeforeProcess", &result, s, w, req)
 	if !result {
 		return
 	}
@@ -161,14 +160,14 @@ func (s *Server) Process(w http.ResponseWriter, req *http.Request) {
 	if req.URL.Path[0] != '/' {
 		req.URL.Path = "/" + req.URL.Path
 	}
-	for _, app := range s.AppsPath {
+	for _, app := range s.Apps {
 		if app != s.RootApp && strings.HasPrefix(req.URL.Path, app.BasePath) {
 			app.routeHandler(req, w)
 			return
 		}
 	}
 	s.RootApp.routeHandler(req, w)
-	_, _ = XHook.Call("AfterProcess", &result, s, w, req) //[SWH|+]call hook
+	_, _ = XHook.Call("AfterProcess", &result, s, w, req)
 }
 
 // Run starts the web application and serves HTTP requests for s
@@ -206,7 +205,7 @@ func (s *Server) Run(addr string) {
 		}))
 
 	}
-	//[SWH|+]call hook
+
 	if c, err := XHook.Call("MuxHandle", mux); err == nil {
 		if ret := XHook.Value(c, 0); ret != nil {
 			mux = ret.(*http.ServeMux)
@@ -295,9 +294,9 @@ func (s *Server) SetStaticDir(path string) {
 }
 
 func (s *Server) App(name string) *App {
-	v, ok := s.Apps[name]
+	path, ok := s.AppsNamePath[name]
 	if ok {
-		return v
+		return s.Apps[path]
 	}
 	return nil
 }
