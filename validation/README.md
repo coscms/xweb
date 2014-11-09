@@ -109,6 +109,7 @@ Struct Tag Use:
 	}
 
 Struct Tag Functions:
+
 	-
 	Required
 	Min(min int)
