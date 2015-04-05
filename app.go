@@ -64,8 +64,8 @@ type AppConfig struct {
 	ReloadTemplates   bool
 	CheckXsrf         bool
 	SessionTimeout    time.Duration
-	FormMapToStruct   bool //[SWH|+]
-	EnableHttpCache   bool //[SWH|+]
+	FormMapToStruct   bool
+	EnableHttpCache   bool
 }
 
 type Route struct {
@@ -76,17 +76,16 @@ type Route struct {
 	HandlerElement reflect.Type    //handler element
 }
 
-func NewApp(args ...string) *App {
-	path := args[0]
+func NewApp(path string, args ...string) *App {
 	name := ""
-	if len(args) == 1 {
+	if len(args) == 0 {
 		name = strings.Replace(path, "/", "_", -1)
 	} else {
-		name = args[1]
+		name = args[0]
 	}
 	return &App{
 		BasePath: path,
-		Name:     name, //[SWH|+]
+		Name:     name,
 		RoutesEq: make(map[string]map[string]Route),
 		AppConfig: &AppConfig{
 			Mode:              Product,
@@ -265,6 +264,12 @@ func (app *App) filter(w http.ResponseWriter, req *http.Request) bool {
 	return true
 }
 
+/**
+ * r		: 	网址
+ * methods	:   HTTP访问方式（GET、POST...）
+ * t		:	控制器实例反射
+ * handler	:	控制器中的方法函数名
+ */
 func (a *App) addRoute(r string, methods map[string]bool, t reflect.Type, handler string) {
 	cr, err := regexp.Compile(r)
 	if err != nil {
@@ -289,58 +294,77 @@ var (
 
 func (app *App) AddRouter(url string, c interface{}) {
 	t := reflect.TypeOf(c).Elem()
+	v := reflect.ValueOf(c)
+	actionFullName := t.Name()
+	actionShortName := strings.TrimSuffix(actionFullName, "Action")
+	actionShortName = strings.ToLower(actionShortName)
 	app.ActionsPath[t] = url
-	app.Actions[t.Name()] = c
-	app.ActionsNamePath[t.Name()] = url
+	app.Actions[actionFullName] = c
+	app.ActionsNamePath[actionFullName] = url
+	//fmt.Println("[Action]:", actionShortName, " [App]:", app.Name, " [URL]:", url)
 	for i := 0; i < t.NumField(); i++ {
 		if t.Field(i).Type != mapperType {
 			continue
 		}
 		name := t.Field(i).Name
 		a := strings.Title(name)
-		v := reflect.ValueOf(c).MethodByName(a)
-		if !v.IsValid() {
+		m := v.MethodByName(a)
+		if !m.IsValid() {
 			continue
 		}
 
 		tag := t.Field(i).Tag
 		tagStr := tag.Get("xweb")
-		methods := map[string]bool{"GET": true, "POST": true}
+		methods := map[string]bool{} //map[string]bool{"GET": true, "POST": true}
 		var p string
 		var isEq bool
 		if tagStr != "" {
 			tags := strings.Split(tagStr, " ")
 			path := tagStr
 			length := len(tags)
-			if length >= 2 {
+			if length >= 2 { //`xweb:"GET|POST /index"`
 				for _, method := range strings.Split(tags[0], "|") {
-					methods[strings.ToUpper(method)] = true
+					method = strings.ToUpper(method)
+					methods[method] = true
 				}
 				path = tags[1]
 				if regexp.QuoteMeta(path) == path {
 					isEq = true
 				}
+				if tags[1][0] != '/' {
+					path = "/" + actionShortName + "/" + path
+				}
 			} else if length == 1 {
-				if tags[0][0] == '/' {
+				if !strings.Contains(tags[0], "|") {
 					path = tags[0]
 					if regexp.QuoteMeta(path) == path {
 						isEq = true
 					}
-				} else {
-					for _, method := range strings.Split(tags[0], "|") {
-						methods[strings.ToUpper(method)] = true
+					if tags[0][0] != '/' { //`xweb:"index"`
+						path = "/" + actionShortName + "/" + path
 					}
-					path = "/" + name
+					methods["GET"] = true
+					methods["POST"] = true
+				} else { //`xweb:"GET|POST"`
+					for _, method := range strings.Split(tags[0], "|") {
+						method = strings.ToUpper(method)
+						methods[method] = true
+					}
+					path = "/" + actionShortName + "/" + name
 					isEq = true
 				}
 			} else {
-				path = "/" + name
+				path = "/" + actionShortName + "/" + name
 				isEq = true
+				methods["GET"] = true
+				methods["POST"] = true
 			}
 			p = strings.TrimRight(url, "/") + path
 		} else {
-			p = strings.TrimRight(url, "/") + "/" + name
+			p = strings.TrimRight(url, "/") + "/" + actionShortName + "/" + name
 			isEq = true
+			methods["GET"] = true
+			methods["POST"] = true
 		}
 		if isEq {
 			app.addEqRoute(removeStick(p), methods, t, a)
@@ -398,7 +422,7 @@ func (a *App) routeHandler(req *http.Request, w http.ResponseWriter) {
 		statusCode = 302
 		return
 	}
-	requestPath = req.URL.Path //[SWH|+]support filter change req.URL.Path
+	requestPath = req.URL.Path //支持filter更改req.URL.Path
 
 	reqPath := removeStick(requestPath)
 	allowMethod := Ternary(req.Method == "HEAD", "GET", req.Method).(string)
@@ -429,7 +453,7 @@ func (a *App) routeHandler(req *http.Request, w http.ResponseWriter) {
 
 			match := cr.FindStringSubmatch(reqPath)
 
-			if len(match[0]) != len(reqPath) {
+			if match[0] != reqPath {
 				continue
 			}
 
@@ -478,29 +502,31 @@ func (a *App) run(req *http.Request, w http.ResponseWriter, route Route, args []
 		c.T[k] = v
 	}
 
+	//设置Action字段的值
 	fieldA := vc.Elem().FieldByName("Action")
-	//fieldA := fieldByName(vc.Elem(), "Action")
 	if fieldA.IsValid() {
 		fieldA.Set(reflect.ValueOf(c))
 	}
 
+	//设置C字段的值
 	fieldC := vc.Elem().FieldByName("C")
-	//fieldC := fieldByName(vc.Elem(), "C")
 	if fieldC.IsValid() {
 		fieldC.Set(reflect.ValueOf(vc))
-		//fieldC.Set(vc)
 	}
 
+	//执行Init方法
 	initM := vc.MethodByName("Init")
 	if initM.IsValid() {
 		params := []reflect.Value{}
 		initM.Call(params)
 	}
 
+	//表单数据自动映射到结构体
 	if c.Option.AutoMapForm {
 		a.StructMap(vc.Elem(), req)
 	}
 
+	//验证XSRF
 	if c.Option.CheckXsrf && req.Method == "POST" {
 		res, err := req.Cookie(XSRF_TAG)
 		formVals := req.Form[XSRF_TAG]
@@ -517,7 +543,7 @@ func (a *App) run(req *http.Request, w http.ResponseWriter, route Route, args []
 		}
 	}
 
-	//[SWH|+]------------------------------------------Before-Hook
+	//执行Before方法
 	structName := reflect.ValueOf(route.HandlerElement.Name())
 	actionName := reflect.ValueOf(route.HandlerMethod)
 	initM = vc.MethodByName("Before")
@@ -543,7 +569,7 @@ func (a *App) run(req *http.Request, w http.ResponseWriter, route Route, args []
 	}
 	statusCode = fieldA.Interface().(*Action).StatusCode
 
-	//[SWH|+]------------------------------------------After-Hook
+	//执行After方法
 	initM = vc.MethodByName("After")
 	if initM.IsValid() {
 		structAction := []reflect.Value{structName, actionName}
@@ -551,7 +577,7 @@ func (a *App) run(req *http.Request, w http.ResponseWriter, route Route, args []
 			structAction = append(structAction, v)
 		}
 		if len(structAction) != initM.Type().NumIn() {
-			a.Error("Error : %v.After(): The number of params is not adapted.", structName)
+			a.Errorf("Error : %v.After(): The number of params is not adapted.", structName)
 			isBreak = true
 			return
 		}
