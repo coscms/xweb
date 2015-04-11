@@ -25,26 +25,27 @@ const (
 )
 
 type App struct {
-	BasePath        string
-	Name            string //[SWH|+]
-	Routes          []Route
-	RoutesEq        map[string]map[string]Route
-	filters         []Filter
-	Server          *Server
-	AppConfig       *AppConfig
-	Config          map[string]interface{}
-	Actions         map[string]interface{}
-	ActionsPath     map[reflect.Type]string
-	ActionsNamePath map[string]string
-	FuncMaps        template.FuncMap
-	Logger          *log.Logger
-	VarMaps         T
-	SessionManager  *httpsession.Manager //Session manager
-	RootTemplate    *template.Template
-	ErrorTemplate   *template.Template
-	StaticVerMgr    *StaticVerMgr
-	TemplateMgr     *TemplateMgr
-	ContentEncoding string
+	BasePath           string
+	Name               string
+	Routes             []Route
+	RoutesEq           map[string]map[string]Route
+	filters            []Filter
+	Server             *Server
+	AppConfig          *AppConfig
+	Config             map[string]interface{}
+	Actions            map[string]interface{}
+	ActionsPath        map[reflect.Type]string
+	ActionsNamePath    map[string]string
+	ActionsMethodRoute map[string]map[string]string
+	FuncMaps           template.FuncMap
+	Logger             *log.Logger
+	VarMaps            T
+	SessionManager     *httpsession.Manager //Session manager
+	RootTemplate       *template.Template
+	ErrorTemplate      *template.Template
+	StaticVerMgr       *StaticVerMgr
+	TemplateMgr        *TemplateMgr
+	ContentEncoding    string
 }
 
 const (
@@ -100,15 +101,16 @@ func NewApp(path string, args ...string) *App {
 			CheckXsrf:         true,
 			FormMapToStruct:   true,
 		},
-		Config:          map[string]interface{}{},
-		Actions:         map[string]interface{}{},
-		ActionsPath:     map[reflect.Type]string{},
-		ActionsNamePath: map[string]string{},
-		FuncMaps:        defaultFuncs,
-		VarMaps:         T{},
-		filters:         make([]Filter, 0),
-		StaticVerMgr:    new(StaticVerMgr),
-		TemplateMgr:     new(TemplateMgr),
+		Config:             map[string]interface{}{},
+		Actions:            map[string]interface{}{},
+		ActionsPath:        map[reflect.Type]string{},
+		ActionsNamePath:    map[string]string{},
+		ActionsMethodRoute: make(map[string]map[string]string),
+		FuncMaps:           defaultFuncs,
+		VarMaps:            T{},
+		filters:            make([]Filter, 0),
+		StaticVerMgr:       new(StaticVerMgr),
+		TemplateMgr:        new(TemplateMgr),
 	}
 }
 
@@ -301,7 +303,8 @@ func (app *App) AddRouter(url string, c interface{}) {
 	app.ActionsPath[t] = url
 	app.Actions[actionFullName] = c
 	app.ActionsNamePath[actionFullName] = url
-	//fmt.Println("[Action]:", actionShortName, " [App]:", app.Name, " [URL]:", url)
+	app.ActionsMethodRoute[actionFullName] = make(map[string]string)
+
 	for i := 0; i < t.NumField(); i++ {
 		if t.Field(i).Type != mapperType {
 			continue
@@ -331,11 +334,15 @@ func (app *App) AddRouter(url string, c interface{}) {
 				if regexp.QuoteMeta(path) == path {
 					isEq = true
 				}
+				if path == "" {
+					path = name
+				}
 				if tags[1][0] != '/' {
 					path = "/" + actionShortName + "/" + path
 				}
 			} else if length == 1 {
-				if !strings.Contains(tags[0], "|") {
+				if !strings.Contains(tags[0], "|") || strings.Contains(tags[0], "(") {
+					//括号内中含“|”时，判断为网址规则
 					path = tags[0]
 					if regexp.QuoteMeta(path) == path {
 						isEq = true
@@ -366,11 +373,14 @@ func (app *App) AddRouter(url string, c interface{}) {
 			methods["GET"] = true
 			methods["POST"] = true
 		}
+		p = removeStick(p)
 		if isEq {
-			app.addEqRoute(removeStick(p), methods, t, a)
+			app.addEqRoute(p, methods, t, a)
+			app.ActionsMethodRoute[actionFullName][name] = p
 		} else {
-			app.addRoute(removeStick(p), methods, t, a)
+			app.addRoute(p, methods, t, a)
 		}
+		//fmt.Println("[Action]:", actionShortName, " [App]:", app.Name, " [URL]:", p)
 	}
 }
 
