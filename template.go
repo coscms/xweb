@@ -150,6 +150,7 @@ func Js(raw string) template.JS {
 }
 
 //Usage:UrlFor("main:root:/user/login") or UrlFor("root:/user/login") or UrlFor("/user/login") or UrlFor()
+//这里的main代表Server名称；root代表App名称；后面的内容为Action中方法函数所对应的网址
 func UrlFor(args ...string) string {
 	s := [3]string{"main", "root", ""}
 	var u []string
