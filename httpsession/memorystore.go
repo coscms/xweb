@@ -126,13 +126,13 @@ func (store *MemoryStore) Clear(id Id) bool {
 
 func (store *MemoryStore) Run() error {
 	time.AfterFunc(store.GcInterval, func() {
-		store.Run()
 		store.GC()
+		store.Run()
 	})
 	return nil
 }
 
-//
+//随机检查过期时间
 func (store *MemoryStore) GC() {
 	store.lock.Lock()
 	defer store.lock.Unlock()

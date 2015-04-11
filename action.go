@@ -498,7 +498,6 @@ func (c *Action) Go(m string, anotherc ...interface{}) error {
 		t = reflect.TypeOf(c.C.Interface()).Elem()
 	}
 
-
 	if _, ok := c.App.ActionsPath[t]; !ok {
 		return NotFound()
 	}
@@ -508,7 +507,7 @@ func (c *Action) Go(m string, anotherc ...interface{}) error {
 	actionFullName := t.Name()
 
 	if mr, ok := c.App.ActionsMethodRoute[actionFullName]; ok {
-		if r,ok := mr[uris[0]]; ok {
+		if r, ok := mr[uris[0]]; ok {
 			return c.Redirect(r)
 		}
 	}
@@ -820,6 +819,8 @@ func (c *Action) SetSession(key string, value interface{}) {
 	c.Session().Set(key, value)
 }
 
-func (c *Action) DelSession(key string) {
-	c.Session().Del(key)
+func (c *Action) DelSession(keys ...string) {
+	for _, key := range keys {
+		c.Session().Del(key)
+	}
 }

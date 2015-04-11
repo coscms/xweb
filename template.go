@@ -197,7 +197,9 @@ func UrlFor(args ...string) string {
 	if s[2] == "" {
 		return url
 	}
-	url += strings.TrimLeft(s[2], "/") + suffix
+	if strings.HasSuffix(s[2], "/") == false {
+		url += strings.TrimLeft(s[2], "/") + suffix
+	}
 	return url
 }
 
