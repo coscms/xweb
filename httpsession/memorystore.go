@@ -9,32 +9,32 @@ var _ Store = NewMemoryStore(30)
 
 type sessionNode struct {
 	lock   sync.RWMutex
-	kvs    map[string]interface{}
-	last   time.Time
-	maxAge time.Duration
+	Kvs    map[string]interface{}
+	Last   time.Time
+	MaxAge time.Duration
 }
 
 func (node *sessionNode) Get(key string) interface{} {
 	node.lock.RLock()
-	v := node.kvs[key]
+	v := node.Kvs[key]
 	node.lock.RUnlock()
 	node.lock.Lock()
-	node.last = time.Now()
+	node.Last = time.Now()
 	node.lock.Unlock()
 	return v
 }
 
 func (node *sessionNode) Set(key string, v interface{}) {
 	node.lock.Lock()
-	node.kvs[key] = v
-	node.last = time.Now()
+	node.Kvs[key] = v
+	node.Last = time.Now()
 	node.lock.Unlock()
 }
 
 func (node *sessionNode) Del(key string) {
 	node.lock.Lock()
-	delete(node.kvs, key)
-	node.last = time.Now()
+	delete(node.Kvs, key)
+	node.Last = time.Now()
 	node.lock.Unlock()
 }
 
@@ -64,7 +64,7 @@ func (store *MemoryStore) Get(id Id, key string) interface{} {
 		return nil
 	}
 
-	if store.maxAge > 0 && time.Now().Sub(node.last) > node.maxAge {
+	if store.maxAge > 0 && time.Now().Sub(node.Last) > node.MaxAge {
 		// lazy DELETE expire
 		store.lock.Lock()
 		delete(store.nodes, id)
@@ -81,11 +81,11 @@ func (store *MemoryStore) Set(id Id, key string, value interface{}) {
 	store.lock.RUnlock()
 	if !ok {
 		store.lock.Lock()
-		node = &sessionNode{kvs: make(map[string]interface{}),
-			last:   time.Now(),
-			maxAge: store.maxAge,
+		node = &sessionNode{Kvs: make(map[string]interface{}),
+			Last:   time.Now(),
+			MaxAge: store.maxAge,
 		}
-		node.kvs[key] = value
+		node.Kvs[key] = value
 		store.nodes[id] = node
 		store.lock.Unlock()
 	}
@@ -94,7 +94,7 @@ func (store *MemoryStore) Set(id Id, key string, value interface{}) {
 }
 
 func (store *MemoryStore) Add(id Id) {
-	node := &sessionNode{kvs: make(map[string]interface{}), last: time.Now()}
+	node := &sessionNode{Kvs: make(map[string]interface{}), Last: time.Now()}
 	store.lock.Lock()
 	store.nodes[id] = node
 	store.lock.Unlock()
@@ -144,7 +144,7 @@ func (store *MemoryStore) GC() {
 		if j > 20 || i > 5 {
 			break
 		}
-		if time.Now().Sub(v.last) > v.maxAge {
+		if time.Now().Sub(v.Last) > v.MaxAge {
 			delete(store.nodes, k)
 			i = i + 1
 		}
