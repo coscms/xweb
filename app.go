@@ -621,7 +621,7 @@ func (a *App) run(req *http.Request, w http.ResponseWriter, route Route, args []
 		isBreak = true
 		return
 	} else {
-		a.Warn("unkonw returned result type %v, ignored %v", sval,
+		a.Warnf("unkonw returned result type %v, ignored %v", sval,
 			sval.Interface().(error))
 
 		isBreak = true
@@ -631,7 +631,7 @@ func (a *App) run(req *http.Request, w http.ResponseWriter, route Route, args []
 	w.Header().Set("Content-Length", strconv.Itoa(len(content)))
 	_, err = w.Write(content)
 	if err != nil {
-		a.Error("Error during write: %v", err)
+		a.Errorf("Error during write: %v", err)
 		statusCode = 500
 		isBreak = true
 		return
