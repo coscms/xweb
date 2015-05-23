@@ -133,15 +133,58 @@ func Slug(s string, sep string) string {
 // NewCookie is a helper method that returns a new http.Cookie object.
 // Duration is specified in seconds. If the duration is zero, the cookie is permanent.
 // This can be used in conjunction with ctx.SetCookie.
-func NewCookie(name string, value string, age int64) *http.Cookie {
-	var utctime time.Time
+func NewCookie(name string, value string, age int64, args ...string) *http.Cookie {
+	var (
+		utctime  time.Time
+		secure   bool
+		httpOnly bool
+		path     string
+		domain   string
+	)
+	switch len(args) {
+	case 1:
+		path = args[0]
+	case 2:
+		path = args[0]
+		domain = args[1]
+	case 3:
+		path = args[0]
+		domain = args[1]
+		str := strings.ToLower(args[2])
+		if str == "true" || str == "1" || str == "on" {
+			secure = true
+		}
+	case 4:
+		path = args[0]
+		domain = args[1]
+		str := strings.ToLower(args[2])
+		if str == "true" || str == "1" || str == "on" {
+			secure = true
+		}
+		str = strings.ToLower(args[3])
+		if str == "true" || str == "1" || str == "on" {
+			httpOnly = true
+		}
+	}
 	if age == 0 {
 		// 2^31 - 1 seconds (roughly 2038)
 		utctime = time.Unix(2147483647, 0)
 	} else {
 		utctime = time.Unix(time.Now().Unix()+age, 0)
 	}
-	return &http.Cookie{Name: name, Value: value, Expires: utctime}
+	return &http.Cookie{
+		Name:       name,
+		Value:      value,
+		Path:       path,
+		Domain:     domain,
+		Expires:    utctime,
+		RawExpires: "",
+		MaxAge:     0,
+		Secure:     secure,
+		HttpOnly:   httpOnly,
+		Raw:        "",
+		Unparsed:   make([]string, 0),
+	}
 }
 
 func removeStick(uri string) string {
