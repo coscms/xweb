@@ -133,38 +133,36 @@ func Slug(s string, sep string) string {
 // NewCookie is a helper method that returns a new http.Cookie object.
 // Duration is specified in seconds. If the duration is zero, the cookie is permanent.
 // This can be used in conjunction with ctx.SetCookie.
-func NewCookie(name string, value string, age int64, args ...string) *http.Cookie {
+func NewCookie(name string, value string, args ...interface{}) *http.Cookie {
 	var (
 		utctime  time.Time
-		secure   bool
-		httpOnly bool
+		age      int64
 		path     string
 		domain   string
+		secure   bool
+		httpOnly bool
 	)
 	switch len(args) {
 	case 1:
-		path = args[0]
+		age = args[0].(int64)
 	case 2:
-		path = args[0]
-		domain = args[1]
+		age = args[0].(int64)
+		path = args[1].(string)
 	case 3:
-		path = args[0]
-		domain = args[1]
-		str := strings.ToLower(args[2])
-		if str == "true" || str == "1" || str == "on" {
-			secure = true
-		}
+		age = args[0].(int64)
+		path = args[1].(string)
+		domain = args[2].(string)
 	case 4:
-		path = args[0]
-		domain = args[1]
-		str := strings.ToLower(args[2])
-		if str == "true" || str == "1" || str == "on" {
-			secure = true
-		}
-		str = strings.ToLower(args[3])
-		if str == "true" || str == "1" || str == "on" {
-			httpOnly = true
-		}
+		age = args[0].(int64)
+		path = args[1].(string)
+		domain = args[2].(string)
+		secure = args[3].(bool)
+	case 5:
+		age = args[0].(int64)
+		path = args[1].(string)
+		domain = args[2].(string)
+		secure = args[3].(bool)
+		httpOnly = args[4].(bool)
 	}
 	if age == 0 {
 		// 2^31 - 1 seconds (roughly 2038)
