@@ -135,6 +135,7 @@ func Slug(s string, sep string) string {
 // This can be used in conjunction with ctx.SetCookie.
 func NewCookie(name string, value string, args ...interface{}) *http.Cookie {
 	var (
+		alen     int = len(args)
 		utctime  time.Time
 		age      int64
 		path     string
@@ -142,27 +143,49 @@ func NewCookie(name string, value string, args ...interface{}) *http.Cookie {
 		secure   bool
 		httpOnly bool
 	)
-	switch len(args) {
-	case 1:
-		age = args[0].(int64)
-	case 2:
-		age = args[0].(int64)
-		path = args[1].(string)
-	case 3:
-		age = args[0].(int64)
-		path = args[1].(string)
-		domain = args[2].(string)
-	case 4:
-		age = args[0].(int64)
-		path = args[1].(string)
-		domain = args[2].(string)
-		secure = args[3].(bool)
-	case 5:
-		age = args[0].(int64)
-		path = args[1].(string)
-		domain = args[2].(string)
-		secure = args[3].(bool)
-		httpOnly = args[4].(bool)
+	if alen > 0 {
+		switch alen {
+		case 2:
+			if v, ok := args[1].(string); ok {
+				path = v
+			}
+		case 3:
+			if v, ok := args[1].(string); ok {
+				path = v
+			}
+			if v, ok := args[2].(string); ok {
+				domain = v
+			}
+		case 4:
+			if v, ok := args[1].(string); ok {
+				path = v
+			}
+			if v, ok := args[2].(string); ok {
+				domain = v
+			}
+			if v, ok := args[3].(bool); ok {
+				secure = v
+			}
+		case 5:
+			if v, ok := args[1].(string); ok {
+				path = v
+			}
+			if v, ok := args[2].(string); ok {
+				domain = v
+			}
+			if v, ok := args[3].(bool); ok {
+				secure = v
+			}
+			if v, ok := args[4].(bool); ok {
+				httpOnly = v
+			}
+		}
+		switch args[0].(type) {
+		case int:
+			age = int64(args[0].(int))
+		case int64:
+			age = args[0].(int64)
+		}
 	}
 	if age == 0 {
 		// 2^31 - 1 seconds (roughly 2038)
