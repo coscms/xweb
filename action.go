@@ -53,6 +53,7 @@ type Action struct {
 	RootTemplate *template.Template
 	RequestBody  []byte
 	StatusCode   int
+	ResponseSize int
 }
 
 type Mapper struct {
@@ -64,7 +65,6 @@ func XsrfName() string {
 	return XSRF_TAG
 }
 
-//[SWH|+]:
 // Protocol returns request protocol name, such as HTTP/1.1 .
 func (c *Action) Protocol() string {
 	return c.Request.Proto
@@ -284,7 +284,8 @@ func (c *Action) SetBody(content []byte) error {
 	} else {
 		c.SetHeader("Content-Length", strconv.Itoa(len(content)))
 	}
-	_, err := output_writer.Write(content)
+	size, err := output_writer.Write(content)
+	c.ResponseSize += size
 	switch output_writer.(type) {
 	case *gzip.Writer:
 		output_writer.(*gzip.Writer).Close()
@@ -293,8 +294,6 @@ func (c *Action) SetBody(content []byte) error {
 	}
 	return err
 }
-
-//[SWH|+];
 
 func (c *Action) XsrfValue() string {
 	var val string = ""
@@ -318,8 +317,7 @@ func (c *Action) XsrfFormHtml() template.HTML {
 
 // WriteString writes string data into the response object.
 func (c *Action) WriteBytes(bytes []byte) error {
-	//_, err := c.ResponseWriter.Write(bytes)
-	err := c.SetBody(bytes) //[SWH|+]
+	err := c.SetBody(bytes)
 	if err != nil {
 		c.App.Error("Error during write:", err)
 	}
@@ -330,8 +328,7 @@ func (c *Action) Write(content string, values ...interface{}) error {
 	if len(values) > 0 {
 		content = fmt.Sprintf(content, values...)
 	}
-	//_, err := c.ResponseWriter.Write([]byte(content))
-	err := c.SetBody([]byte(content)) //[SWH|+]
+	err := c.SetBody([]byte(content))
 	if err != nil {
 		c.App.Error("Error during write:", err)
 	}
@@ -644,8 +641,7 @@ func (c *Action) NamedRender(name, content string, params ...*T) error {
 						tplcontent = ret.([]byte)
 					}
 				}
-				err = c.SetBody(tplcontent) //[SWH|+]
-				//_, err = c.ResponseWriter.Write(tplcontent)
+				err = c.SetBody(tplcontent)
 			}
 		}
 	}
@@ -734,7 +730,8 @@ func (c *Action) ServeJson(obj interface{}) {
 	}
 	c.SetHeader("Content-Length", strconv.Itoa(len(content)))
 	c.ResponseWriter.Header().Set("Content-Type", "application/json")
-	c.ResponseWriter.Write(content)
+	size,_ := c.ResponseWriter.Write(content)
+	c.ResponseSize += size
 }
 
 func (c *Action) ServeXml(obj interface{}) {
@@ -745,7 +742,8 @@ func (c *Action) ServeXml(obj interface{}) {
 	}
 	c.SetHeader("Content-Length", strconv.Itoa(len(content)))
 	c.ResponseWriter.Header().Set("Content-Type", "application/xml")
-	c.ResponseWriter.Write(content)
+	size,_ := c.ResponseWriter.Write(content)
+	c.ResponseSize += size
 }
 
 func (c *Action) ServeFile(fpath string) {
