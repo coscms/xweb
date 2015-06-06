@@ -36,7 +36,7 @@ func (s *AutoResponse) Do(c *Action, ret []reflect.Value) error {
 	}
 	c.SetHeader("Content-Length", strconv.Itoa(len(content)))
 	size, err := c.ResponseWriter.Write(content)
-	c.ResponseSize += size
+	c.ResponseSize += int64(size)
 	return err
 }
 

@@ -53,7 +53,7 @@ type Action struct {
 	RootTemplate *template.Template
 	RequestBody  []byte
 	StatusCode   int
-	ResponseSize int
+	ResponseSize int64
 }
 
 type Mapper struct {
@@ -285,7 +285,7 @@ func (c *Action) SetBody(content []byte) error {
 		c.SetHeader("Content-Length", strconv.Itoa(len(content)))
 	}
 	size, err := output_writer.Write(content)
-	c.ResponseSize += size
+	c.ResponseSize += int64(size)
 	switch output_writer.(type) {
 	case *gzip.Writer:
 		output_writer.(*gzip.Writer).Close()
@@ -731,7 +731,7 @@ func (c *Action) ServeJson(obj interface{}) {
 	c.SetHeader("Content-Length", strconv.Itoa(len(content)))
 	c.ResponseWriter.Header().Set("Content-Type", "application/json")
 	size,_ := c.ResponseWriter.Write(content)
-	c.ResponseSize += size
+	c.ResponseSize += int64(size)
 }
 
 func (c *Action) ServeXml(obj interface{}) {
@@ -743,7 +743,7 @@ func (c *Action) ServeXml(obj interface{}) {
 	c.SetHeader("Content-Length", strconv.Itoa(len(content)))
 	c.ResponseWriter.Header().Set("Content-Type", "application/xml")
 	size,_ := c.ResponseWriter.Write(content)
-	c.ResponseSize += size
+	c.ResponseSize += int64(size)
 }
 
 func (c *Action) ServeFile(fpath string) {

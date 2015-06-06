@@ -46,6 +46,7 @@ type App struct {
 	StaticVerMgr       *StaticVerMgr
 	TemplateMgr        *TemplateMgr
 	ContentEncoding    string
+	requestTime		   time.Time
 }
 
 const (
@@ -380,22 +381,35 @@ func (app *App) AddRouter(url string, c interface{}) {
 		} else {
 			app.addRoute(p, methods, t, a)
 		}
-		//fmt.Println("[Action]:", actionShortName, " [App]:", app.Name, " [URL]:", p)
+		app.Debug("Action:", actionFullName+"."+a+";", "Route Information:", p+";", "Request Method:", methods)
 	}
+}
+
+
+func (a *App) ElapsedTimeString() string {
+	return fmt.Sprintf("%.3fs", a.ElapsedTime())
+}
+
+func (a *App) ElapsedTime() float64 {
+	return time.Now().Sub(a.requestTime).Seconds()
 }
 
 // the main route handler in web.go
 func (a *App) routeHandler(req *http.Request, w http.ResponseWriter) {
-	requestPath := req.URL.Path
-	var statusCode = 0
+	var (
+		requestPath		string		= req.URL.Path
+		statusCode		int			= 0
+		responseSize	int64		= 0
+	)
+	a.requestTime = time.Now()
 	defer func() {
 		if statusCode == 0 {
 			statusCode = 200
 		}
 		if statusCode >= 200 && statusCode < 400 {
-			a.Info(req.Method, statusCode, requestPath)
+			a.Info(req.RemoteAddr, req.Method, statusCode, requestPath, responseSize, a.ElapsedTimeString())
 		} else {
-			a.Error(req.Method, statusCode, requestPath)
+			a.Error(req.RemoteAddr, req.Method, statusCode, requestPath, responseSize, a.ElapsedTimeString())
 		}
 	}()
 
@@ -409,14 +423,15 @@ func (a *App) routeHandler(req *http.Request, w http.ResponseWriter) {
 
 	//set some default headers
 	w.Header().Set("Server", "xweb")
-	tm := time.Now().UTC()
+	tm := a.requestTime.UTC()
 	w.Header().Set("Date", webTime(tm))
 
 	// static files, needed op
 	if req.Method == "GET" || req.Method == "HEAD" {
-		success := a.TryServingFile(requestPath, req, w)
+		success,size := a.TryServingFile(requestPath, req, w)
 		if success {
 			statusCode = 200
+			responseSize = size
 			return
 		}
 		if requestPath == "/favicon.ico" {
@@ -441,7 +456,7 @@ func (a *App) routeHandler(req *http.Request, w http.ResponseWriter) {
 		if route, ok := routes[allowMethod]; ok {
 			var isBreak bool = false
 			var args []reflect.Value
-			isBreak, statusCode = a.run(req, w, route, args)
+			isBreak, statusCode, responseSize = a.run(req, w, route, args)
 			if isBreak {
 				return
 			}
@@ -472,7 +487,7 @@ func (a *App) routeHandler(req *http.Request, w http.ResponseWriter) {
 				args = append(args, reflect.ValueOf(arg))
 			}
 			var isBreak bool = false
-			isBreak, statusCode = a.run(req, w, route, args)
+			isBreak, statusCode, responseSize = a.run(req, w, route, args)
 			if isBreak {
 				return
 			}
@@ -480,11 +495,13 @@ func (a *App) routeHandler(req *http.Request, w http.ResponseWriter) {
 	}
 	// try serving index.html or index.htm
 	if req.Method == "GET" || req.Method == "HEAD" {
-		if a.TryServingFile(path.Join(requestPath, "index.html"), req, w) {
+		if ok,size := a.TryServingFile(path.Join(requestPath, "index.html"), req, w); ok {
 			statusCode = 200
+			responseSize = size
 			return
-		} else if a.TryServingFile(path.Join(requestPath, "index.htm"), req, w) {
+		} else if ok,size := a.TryServingFile(path.Join(requestPath, "index.htm"), req, w); ok {
 			statusCode = 200
+			responseSize = size
 			return
 		}
 	}
@@ -493,7 +510,7 @@ func (a *App) routeHandler(req *http.Request, w http.ResponseWriter) {
 	statusCode = 404
 }
 
-func (a *App) run(req *http.Request, w http.ResponseWriter, route Route, args []reflect.Value) (isBreak bool, statusCode int) {
+func (a *App) run(req *http.Request, w http.ResponseWriter, route Route, args []reflect.Value) (isBreak bool, statusCode int, responseSize int64) {
 
 	vc := reflect.New(route.HandlerElement)
 	c := &Action{
@@ -561,6 +578,7 @@ func (a *App) run(req *http.Request, w http.ResponseWriter, route Route, args []
 		structAction := []reflect.Value{structName, actionName}
 		if ok := initM.Call(structAction); !ok[0].Bool() {
 			isBreak = true
+			responseSize = c.ResponseSize
 			return
 		}
 	}
@@ -575,6 +593,7 @@ func (a *App) run(req *http.Request, w http.ResponseWriter, route Route, args []
 		}
 		statusCode = 500
 		isBreak = true
+		responseSize = c.ResponseSize
 		return
 	}
 	statusCode = fieldA.Interface().(*Action).StatusCode
@@ -593,12 +612,14 @@ func (a *App) run(req *http.Request, w http.ResponseWriter, route Route, args []
 		}
 		if ok := initM.Call(structAction); !ok[0].Bool() {
 			isBreak = true
+			responseSize = c.ResponseSize
 			return
 		}
 	}
 
 	if len(ret) == 0 {
 		isBreak = true
+		responseSize = c.ResponseSize
 		return
 	}
 
@@ -607,6 +628,7 @@ func (a *App) run(req *http.Request, w http.ResponseWriter, route Route, args []
 	var content []byte
 	if sval.Interface() == nil || sval.Kind() == reflect.Bool {
 		isBreak = true
+		responseSize = c.ResponseSize
 		return
 	} else if sval.Kind() == reflect.String {
 		content = []byte(sval.String())
@@ -617,25 +639,27 @@ func (a *App) run(req *http.Request, w http.ResponseWriter, route Route, args []
 			a.Error("Error:", err)
 			a.error(w, 500, "Server Error")
 			statusCode = 500
+		}else{
+			responseSize = c.ResponseSize
 		}
 		isBreak = true
 		return
 	} else {
 		a.Warnf("unkonw returned result type %v, ignored %v", sval,
 			sval.Interface().(error))
-
 		isBreak = true
 		return
 	}
 
 	w.Header().Set("Content-Length", strconv.Itoa(len(content)))
-	_, err = w.Write(content)
+	size, err := w.Write(content)
 	if err != nil {
 		a.Errorf("Error during write: %v", err)
 		statusCode = 500
 		isBreak = true
 		return
 	}
+	responseSize = int64(size)
 	return
 }
 
@@ -718,17 +742,19 @@ func (a *App) InitHeadContent(w http.ResponseWriter, contentLength int64) {
 
 // tryServingFile attempts to serve a static file, and returns
 // whether or not the operation is successful.
-func (a *App) TryServingFile(name string, req *http.Request, w http.ResponseWriter) bool {
+func (a *App) TryServingFile(name string, req *http.Request, w http.ResponseWriter) (bool,int64) {
 	newPath := name
 	if strings.HasPrefix(name, a.BasePath) {
 		newPath = name[len(a.BasePath):]
 	}
+	var size int64
 	staticFile := filepath.Join(a.AppConfig.StaticDir, newPath)
 	finfo, err := os.Stat(staticFile)
 	if err != nil {
-		return false
+		return false,size
 	}
 	if !finfo.IsDir() {
+		size = finfo.Size()
 		isStaticFileToCompress := false
 		if a.Server.Config.EnableGzip && a.Server.Config.StaticExtensionsToGzip != nil && len(a.Server.Config.StaticExtensionsToGzip) > 0 {
 			for _, statExtension := range a.Server.Config.StaticExtensionsToGzip {
@@ -742,16 +768,16 @@ func (a *App) TryServingFile(name string, req *http.Request, w http.ResponseWrit
 			a.ContentEncoding = GetAcceptEncodingZip(req)
 			memzipfile, err := OpenMemZipFile(staticFile, a.ContentEncoding)
 			if err != nil {
-				return false
+				return false,size
 			}
 			a.InitHeadContent(w, finfo.Size())
 			http.ServeContent(w, req, staticFile, finfo.ModTime(), memzipfile)
 		} else {
 			http.ServeFile(w, req, staticFile)
 		}
-		return true
+		return true,size
 	}
-	return false
+	return false,size
 }
 
 var (
