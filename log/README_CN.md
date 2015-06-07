@@ -1,35 +1,38 @@
 ## log
 [![GoDoc](https://godoc.org/github.com/lunny/log?status.png)](https://godoc.org/github.com/lunny/log)
 
-[简体中文](https://github.com/lunny/log/blob/master/README_CN.md)
+[English](https://github.com/lunny/log/blob/master/README.md)
 
-# Installation
+# 安装
 
 ```
 go get github.com/lunny/log
 ```
 
-# Features
+# 特性
 
-* Add color support for unix console
-* Implemented dbwriter to save log to database
-* Implemented FileWriter to save log to file by date or time.
+* 对unix增加控制台颜色支持
+* 实现了保存log到数据库支持
+* 实现了保存log到按日期的文件支持
 
-# Example
+# 例子
 
-For Single File:
+保存到单个文件：
+
 ```Go
 f, _ := os.Create("my.log")
 log.Std.SetOutput(f)
 ```
 
-For Multiple Writer:
+保存到数据库：
+
 ```Go
 f, _ := os.Create("my.log")
 log.Std.SetOutput(io.MultiWriter(f, os.Stdout))
 ```
 
-For log files by date or time:
+保存到按时间分隔的文件：
+
 ```Go
 w := log.NewFileWriter(log.FileOptions{
     ByType:log.ByDay,
@@ -38,6 +41,6 @@ w := log.NewFileWriter(log.FileOptions{
 log.Std.SetOutput(w)
 ```
 
-# About
+# 关于
 
-This repo is an extension of Golang log.
+本 Log 是在 golang 的 log 之上的扩展

@@ -294,80 +294,50 @@ func (l *Logger) Println(v ...interface{}) {
 // -----------------------------------------
 
 func (l *Logger) Debugf(format string, v ...interface{}) {
-	if Ldebug < l.Level {
-		return
-	}
 	l.Output("", Ldebug, 2, fmt.Sprintf(format, v...))
 }
 
 func (l *Logger) Debug(v ...interface{}) {
-	if Ldebug < l.Level {
-		return
-	}
 	l.Output("", Ldebug, 2, fmt.Sprintln(v...))
 }
 
 // -----------------------------------------
 func (l *Logger) Infof(format string, v ...interface{}) {
-	if Linfo < l.Level {
-		return
-	}
 	l.Output("", Linfo, 2, fmt.Sprintf(format, v...))
 }
 
 func (l *Logger) Info(v ...interface{}) {
-	if Linfo < l.Level {
-		return
-	}
 	l.Output("", Linfo, 2, fmt.Sprintln(v...))
 }
 
 // -----------------------------------------
 func (l *Logger) Warnf(format string, v ...interface{}) {
-	if Lwarn < l.Level {
-		return
-	}
 	l.Output("", Lwarn, 2, fmt.Sprintf(format, v...))
 }
 
 func (l *Logger) Warn(v ...interface{}) {
-	if Lwarn < l.Level {
-		return
-	}
 	l.Output("", Lwarn, 2, fmt.Sprintln(v...))
 }
 
 // -----------------------------------------
 
 func (l *Logger) Errorf(format string, v ...interface{}) {
-	if Lerror < l.Level {
-		return
-	}
 	l.Output("", Lerror, 2, fmt.Sprintf(format, v...))
 }
 
 func (l *Logger) Error(v ...interface{}) {
-	if Lerror < l.Level {
-		return
-	}
 	l.Output("", Lerror, 2, fmt.Sprintln(v...))
 }
 
 // -----------------------------------------
 
 func (l *Logger) Fatal(v ...interface{}) {
-	if Lfatal < l.Level {
-		return
-	}
 	l.Output("", Lfatal, 2, fmt.Sprintln(v...))
 	os.Exit(1)
 }
 
 // Fatalf is equivalent to l.Printf() followed by a call to os.Exit(1).
 func (l *Logger) Fatalf(format string, v ...interface{}) {
-	if Lfatal < l.Level {
-		return
-	}
 	l.Output("", Lfatal, 2, fmt.Sprintf(format, v...))
 	os.Exit(1)
 }
@@ -375,9 +345,6 @@ func (l *Logger) Fatalf(format string, v ...interface{}) {
 // -----------------------------------------
 // Panic is equivalent to l.Print() followed by a call to panic().
 func (l *Logger) Panic(v ...interface{}) {
-	if Lpanic < l.Level {
-		return
-	}
 	s := fmt.Sprintln(v...)
 	l.Output("", Lpanic, 2, s)
 	panic(s)
@@ -385,9 +352,6 @@ func (l *Logger) Panic(v ...interface{}) {
 
 // Panicf is equivalent to l.Printf() followed by a call to panic().
 func (l *Logger) Panicf(format string, v ...interface{}) {
-	if Lpanic < l.Level {
-		return
-	}
 	s := fmt.Sprintf(format, v...)
 	l.Output("", Lpanic, 2, s)
 	panic(s)
@@ -466,6 +430,9 @@ func (l *Logger) SetOutput(w io.Writer) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	l.out = w
+	if w != os.Stdout {
+		l.flag = RmColorFlags(l.flag)
+	}
 }
 
 // SetOutput sets the output destination for the standard logger.
@@ -524,64 +491,40 @@ func Println(v ...interface{}) {
 // -----------------------------------------
 
 func Debugf(format string, v ...interface{}) {
-	if Ldebug < Std.Level {
-		return
-	}
 	Std.Output("", Ldebug, 2, fmt.Sprintf(format, v...))
 }
 
 func Debug(v ...interface{}) {
-	if Ldebug < Std.Level {
-		return
-	}
 	Std.Output("", Ldebug, 2, fmt.Sprintln(v...))
 }
 
 // -----------------------------------------
 
 func Infof(format string, v ...interface{}) {
-	if Linfo < Std.Level {
-		return
-	}
 	Std.Output("", Linfo, 2, fmt.Sprintf(format, v...))
 }
 
 func Info(v ...interface{}) {
-	if Linfo < Std.Level {
-		return
-	}
 	Std.Output("", Linfo, 2, fmt.Sprintln(v...))
 }
 
 // -----------------------------------------
 
 func Warnf(format string, v ...interface{}) {
-	if Lwarn < Std.Level {
-		return
-	}
 	Std.Output("", Lwarn, 2, fmt.Sprintf(format, v...))
 }
 
 func Warn(v ...interface{}) {
-	if Lwarn < Std.Level {
-		return
-	}
 	Std.Output("", Lwarn, 2, fmt.Sprintln(v...))
 }
 
 // -----------------------------------------
 
 func Errorf(format string, v ...interface{}) {
-	if Lerror < Std.Level {
-		return
-	}
 	Std.Output("", Lerror, 2, fmt.Sprintf(format, v...))
 }
 
 func Error(v ...interface{}) {
-	if Lerror < Std.Level {
-		return
-	}
 	Std.Output("", Lerror, 2, fmt.Sprintln(v...))
 }
 
@@ -589,17 +532,11 @@ func Error(v ...interface{}) {
 
 // Fatal is equivalent to Print() followed by a call to os.Exit(1).
 func Fatal(v ...interface{}) {
-	if Lfatal < Std.Level {
-		return
-	}
 	Std.Output("", Lfatal, 2, fmt.Sprintln(v...))
 }
 
 // Fatalf is equivalent to Printf() followed by a call to os.Exit(1).
 func Fatalf(format string, v ...interface{}) {
-	if Lfatal < Std.Level {
-		return
-	}
 	Std.Output("", Lfatal, 2, fmt.Sprintf(format, v...))
 }
 
@@ -607,17 +544,11 @@ func Fatalf(format string, v ...interface{}) {
 
 // Panic is equivalent to Print() followed by a call to panic().
 func Panic(v ...interface{}) {
-	if Lpanic < Std.Level {
-		return
-	}
 	Std.Output("", Lpanic, 2, fmt.Sprintln(v...))
 }
 
 // Panicf is equivalent to Printf() followed by a call to panic().
 func Panicf(format string, v ...interface{}) {
-	if Lpanic < Std.Level {
-		return
-	}
 	Std.Output("", Lpanic, 2, fmt.Sprintf(format, v...))
 }
 
