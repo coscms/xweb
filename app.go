@@ -22,7 +22,6 @@ import (
 
 var (
 	mapperType         = reflect.TypeOf(Mapper{})
-	sc         *Action = &Action{}
 )
 
 const (
