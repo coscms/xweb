@@ -46,7 +46,7 @@ type App struct {
 	StaticVerMgr       *StaticVerMgr
 	TemplateMgr        *TemplateMgr
 	ContentEncoding    string
-	requestTime		   time.Time
+	requestTime        time.Time
 }
 
 const (
@@ -385,7 +385,6 @@ func (app *App) AddRouter(url string, c interface{}) {
 	}
 }
 
-
 func (a *App) ElapsedTimeString() string {
 	return fmt.Sprintf("%.3fs", a.ElapsedTime())
 }
@@ -397,9 +396,9 @@ func (a *App) ElapsedTime() float64 {
 // the main route handler in web.go
 func (a *App) routeHandler(req *http.Request, w http.ResponseWriter) {
 	var (
-		requestPath		string		= req.URL.Path
-		statusCode		int			= 0
-		responseSize	int64		= 0
+		requestPath  string = req.URL.Path
+		statusCode   int    = 0
+		responseSize int64  = 0
 	)
 	a.requestTime = time.Now()
 	defer func() {
@@ -428,7 +427,7 @@ func (a *App) routeHandler(req *http.Request, w http.ResponseWriter) {
 
 	// static files, needed op
 	if req.Method == "GET" || req.Method == "HEAD" {
-		success,size := a.TryServingFile(requestPath, req, w)
+		success, size := a.TryServingFile(requestPath, req, w)
 		if success {
 			statusCode = 200
 			responseSize = size
@@ -495,11 +494,11 @@ func (a *App) routeHandler(req *http.Request, w http.ResponseWriter) {
 	}
 	// try serving index.html or index.htm
 	if req.Method == "GET" || req.Method == "HEAD" {
-		if ok,size := a.TryServingFile(path.Join(requestPath, "index.html"), req, w); ok {
+		if ok, size := a.TryServingFile(path.Join(requestPath, "index.html"), req, w); ok {
 			statusCode = 200
 			responseSize = size
 			return
-		} else if ok,size := a.TryServingFile(path.Join(requestPath, "index.htm"), req, w); ok {
+		} else if ok, size := a.TryServingFile(path.Join(requestPath, "index.htm"), req, w); ok {
 			statusCode = 200
 			responseSize = size
 			return
@@ -639,7 +638,7 @@ func (a *App) run(req *http.Request, w http.ResponseWriter, route Route, args []
 			a.Error("Error:", err)
 			a.error(w, 500, "Server Error")
 			statusCode = 500
-		}else{
+		} else {
 			responseSize = c.ResponseSize
 		}
 		isBreak = true
@@ -742,7 +741,7 @@ func (a *App) InitHeadContent(w http.ResponseWriter, contentLength int64) {
 
 // tryServingFile attempts to serve a static file, and returns
 // whether or not the operation is successful.
-func (a *App) TryServingFile(name string, req *http.Request, w http.ResponseWriter) (bool,int64) {
+func (a *App) TryServingFile(name string, req *http.Request, w http.ResponseWriter) (bool, int64) {
 	newPath := name
 	if strings.HasPrefix(name, a.BasePath) {
 		newPath = name[len(a.BasePath):]
@@ -751,7 +750,7 @@ func (a *App) TryServingFile(name string, req *http.Request, w http.ResponseWrit
 	staticFile := filepath.Join(a.AppConfig.StaticDir, newPath)
 	finfo, err := os.Stat(staticFile)
 	if err != nil {
-		return false,size
+		return false, size
 	}
 	if !finfo.IsDir() {
 		size = finfo.Size()
@@ -768,16 +767,16 @@ func (a *App) TryServingFile(name string, req *http.Request, w http.ResponseWrit
 			a.ContentEncoding = GetAcceptEncodingZip(req)
 			memzipfile, err := OpenMemZipFile(staticFile, a.ContentEncoding)
 			if err != nil {
-				return false,size
+				return false, size
 			}
 			a.InitHeadContent(w, finfo.Size())
 			http.ServeContent(w, req, staticFile, finfo.ModTime(), memzipfile)
 		} else {
 			http.ServeFile(w, req, staticFile)
 		}
-		return true,size
+		return true, size
 	}
-	return false,size
+	return false, size
 }
 
 var (
