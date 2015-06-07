@@ -4,11 +4,7 @@ package xweb
 
 import (
 	"crypto/tls"
-	"fmt"
-	"io"
 	"net/http"
-	"os"
-	"path"
 
 	"github.com/coscms/xweb/log"
 )
@@ -16,30 +12,6 @@ import (
 const (
 	Version = "0.2.1"
 )
-
-func redirect(w http.ResponseWriter, url string, status ...int) error {
-	s := 302
-	if len(status) > 0 {
-		s = status[0]
-	}
-	w.Header().Set("Location", url)
-	w.WriteHeader(s)
-	_, err := w.Write([]byte("Redirecting to: " + url))
-	return err
-}
-
-func Download(w http.ResponseWriter, fpath string) error {
-	f, err := os.Open(fpath)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	fName := fpath[len(path.Dir(fpath))+1:]
-	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%v\"", fName))
-	_, err = io.Copy(w, f)
-	return err
-}
 
 const (
 	defaultErrorTmpl = `<!DOCTYPE html>

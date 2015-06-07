@@ -4,9 +4,7 @@ import (
 	"bytes"
 	"compress/flate"
 	"compress/gzip"
-	"crypto/hmac"
 	"crypto/md5"
-	"crypto/sha1"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
@@ -21,7 +19,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-
 	"reflect"
 	"strconv"
 	"strings"
@@ -31,6 +28,11 @@ import (
 	"github.com/coscms/xweb/log"
 	"github.com/coscms/xweb/uuid"
 )
+
+type Mapper struct {
+}
+
+type T map[string]interface{}
 
 type ActionOption struct {
 	AutoMapForm bool
@@ -54,15 +56,6 @@ type Action struct {
 	RequestBody  []byte
 	StatusCode   int
 	ResponseSize int64
-}
-
-type Mapper struct {
-}
-
-type T map[string]interface{}
-
-func XsrfName() string {
-	return XSRF_TAG
 }
 
 // Protocol returns request protocol name, such as HTTP/1.1 .
@@ -424,16 +417,6 @@ func (c *Action) GetCookie(cookieName string) (*http.Cookie, error) {
 	return c.Request.Cookie(cookieName)
 }
 
-func getCookieSig(key string, val []byte, timestamp string) string {
-	hm := hmac.New(sha1.New, []byte(key))
-
-	hm.Write(val)
-	hm.Write([]byte(timestamp))
-
-	hex := fmt.Sprintf("%02x", hm.Sum(nil))
-	return hex
-}
-
 func (c *Action) SetSecureCookie(name string, val string, age int64) {
 	//base64 encode the val
 	if len(c.App.AppConfig.CookieSecret) == 0 {
@@ -613,6 +596,10 @@ func (c *Action) NamedRender(name, content string, params ...*T) error {
 	c.f["include"] = c.Include
 	if c.App.AppConfig.SessionOn {
 		c.f["session"] = c.GetSession
+	} else {
+		c.f["session"] = func(key string) interface{} {
+			return ""
+		}
 	}
 	c.f["cookie"] = c.Cookie
 	c.f["XsrfFormHtml"] = c.XsrfFormHtml

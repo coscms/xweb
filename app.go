@@ -20,8 +20,15 @@ import (
 	"github.com/coscms/xweb/log"
 )
 
+var (
+	mapperType         = reflect.TypeOf(Mapper{})
+	sc         *Action = &Action{}
+)
+
 const (
 	XSRF_TAG string = "_xsrf"
+	Debug           = iota + 1
+	Product
 )
 
 type App struct {
@@ -48,11 +55,6 @@ type App struct {
 	ContentEncoding    string
 	requestTime        time.Time
 }
-
-const (
-	Debug = iota + 1
-	Product
-)
 
 type AppConfig struct {
 	Mode              int
@@ -290,10 +292,6 @@ func (a *App) addEqRoute(r string, methods map[string]bool, t reflect.Type, hand
 		a.RoutesEq[r][v] = Route{HandlerMethod: handler, HandlerElement: t}
 	}
 }
-
-var (
-	mapperType = reflect.TypeOf(Mapper{})
-)
 
 func (app *App) AddRouter(url string, c interface{}) {
 	t := reflect.TypeOf(c).Elem()
@@ -778,10 +776,6 @@ func (a *App) TryServingFile(name string, req *http.Request, w http.ResponseWrit
 	}
 	return false, size
 }
-
-var (
-	sc *Action = &Action{}
-)
 
 // StructMap function mapping params to controller's properties
 func (a *App) StructMap(vc reflect.Value, r *http.Request) error {

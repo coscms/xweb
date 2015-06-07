@@ -2,6 +2,10 @@ package xweb
 
 import (
 	"bytes"
+	"crypto/hmac"
+	"crypto/sha1"
+	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -242,4 +246,42 @@ func fieldByName(v reflect.Value, name string) reflect.Value {
 	}
 
 	return reflect.Zero(t)
+}
+
+func XsrfName() string {
+	return XSRF_TAG
+}
+
+func getCookieSig(key string, val []byte, timestamp string) string {
+	hm := hmac.New(sha1.New, []byte(key))
+
+	hm.Write(val)
+	hm.Write([]byte(timestamp))
+
+	hex := fmt.Sprintf("%02x", hm.Sum(nil))
+	return hex
+}
+
+func redirect(w http.ResponseWriter, url string, status ...int) error {
+	s := 302
+	if len(status) > 0 {
+		s = status[0]
+	}
+	w.Header().Set("Location", url)
+	w.WriteHeader(s)
+	_, err := w.Write([]byte("Redirecting to: " + url))
+	return err
+}
+
+func Download(w http.ResponseWriter, fpath string) error {
+	f, err := os.Open(fpath)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	fName := fpath[len(path.Dir(fpath))+1:]
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%v\"", fName))
+	_, err = io.Copy(w, f)
+	return err
 }

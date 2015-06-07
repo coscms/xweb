@@ -13,6 +13,31 @@ import (
 	"github.com/howeyc/fsnotify"
 )
 
+/**
+ * 默认模板函数
+ * 除了这里定义的之外，还可以使用当前Action（即在方法中使用Render的Action）中定义的可导出的属性和方法（使用".属性"或".方法"来访问）
+ * 另外还支持函数：
+ * include      —— Include(tmplName string) interface{}
+ * session      —— GetSession(key string) interface{}
+ * cookie       —— Cookie(key string) string
+ * XsrfFormHtml —— XsrfFormHtml() template.HTML
+ * XsrfValue    —— XsrfValue() string
+ */
+var (
+	defaultFuncs template.FuncMap = template.FuncMap{
+		"Now":        Now,
+		"Eq":         Eq,
+		"FormatDate": FormatDate,
+		"Add":        Add,
+		"Subtract":   Subtract,
+		"IsNil":      IsNil,
+		"UrlFor":     UrlFor,
+		"Html":       Html,
+		"Js":         Js,
+		"Css":        Css,
+	}
+)
+
 func IsNil(a interface{}) bool {
 	switch a.(type) {
 	case nil:
@@ -149,6 +174,10 @@ func Js(raw string) template.JS {
 	return template.JS(raw)
 }
 
+func Css(raw string) template.CSS {
+	return template.CSS(raw)
+}
+
 //Usage:UrlFor("main:root:/user/login") or UrlFor("root:/user/login") or UrlFor("/user/login") or UrlFor()
 //这里的main代表Server名称；root代表App名称；后面的内容为Action中方法函数所对应的网址
 func UrlFor(args ...string) string {
@@ -202,20 +231,6 @@ func UrlFor(args ...string) string {
 	}
 	return url
 }
-
-var (
-	defaultFuncs template.FuncMap = template.FuncMap{
-		"Now":        Now,
-		"Eq":         Eq,
-		"FormatDate": FormatDate,
-		"Html":       Html,
-		"Add":        Add,
-		"Subtract":   Subtract,
-		"IsNil":      IsNil,
-		"UrlFor":     UrlFor,
-		"Js":         Js,
-	}
-)
 
 type TemplateMgr struct {
 	Caches       map[string][]byte
