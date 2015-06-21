@@ -35,8 +35,13 @@ var (
 		"Html":       Html,
 		"Js":         Js,
 		"Css":        Css,
+		"XsrfField":  XsrfField,
 	}
 )
+
+func XsrfField() string {
+	return XSRF_TAG
+}
 
 func IsNil(a interface{}) bool {
 	switch a.(type) {
