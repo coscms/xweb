@@ -339,8 +339,8 @@ func (app *App) AddRouter(url string, c interface{}) {
 					path = "/" + actionShortName + "/" + path
 				}
 			} else if length == 1 {
-				if !strings.Contains(tags[0], "|") || strings.Contains(tags[0], "(") {
-					//括号内中含“|”时，判断为网址规则
+				if matched, _ := regexp.MatchString(`^[A-Z]+(\|[A-Z]+)*$`, tags[0]); !matched {
+					//非全大写字母时，判断为网址规则
 					path = tags[0]
 					if regexp.QuoteMeta(path) == path {
 						isEq = true
