@@ -22,6 +22,10 @@ import (
  * cookie       —— Cookie(key string) string
  * XsrfFormHtml —— XsrfFormHtml() template.HTML
  * XsrfValue    —— XsrfValue() string
+ * XsrfName     —— XsrfName() string
+ * StaticUrl    —— StaticUrl(url string) string
+ * 支持变量：
+ * XwebVer      —— string
  */
 var (
 	defaultFuncs template.FuncMap = template.FuncMap{
@@ -35,13 +39,10 @@ var (
 		"Html":       Html,
 		"Js":         Js,
 		"Css":        Css,
-		"XsrfField":  XsrfField,
+		"XsrfField":  XsrfName,//alias
 	}
 )
 
-func XsrfField() string {
-	return XSRF_TAG
-}
 
 func IsNil(a interface{}) bool {
 	switch a.(type) {
