@@ -189,6 +189,8 @@ func NewCookie(name string, value string, args ...interface{}) *http.Cookie {
 			age = int64(args[0].(int))
 		case int64:
 			age = args[0].(int64)
+		case time.Duration:
+			age = int64(args[0].(time.Duration))
 		}
 	}
 	if age == 0 {

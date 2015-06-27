@@ -415,17 +415,17 @@ func (c *Action) SetCookie(cookie *http.Cookie) {
 
 func (c *Action) NewCookie(name string, value string, args ...interface{}) *http.Cookie {
 	length := len(args)
-	if length<1 {
-		args = append(args,c.App.AppConfig.SessionTimeout)
+	if length < 1 {
+		args = append(args, c.App.AppConfig.SessionTimeout)
 	}
-	if length<2 {
-		args = append(args,"/")
+	if length < 2 {
+		args = append(args, "/")
 	}
-	if length<3 {
-		args = append(args,c.App.AppConfig.CookieDomain)
+	if length < 3 {
+		args = append(args, c.App.AppConfig.CookieDomain)
 	}
-	if length<4 {
-		args = append(args,c.IsSecure())
+	if length < 4 {
+		args = append(args, c.IsSecure())
 	}
 	return NewCookie(c.App.AppConfig.CookiePrefix+name, value, args...)
 }
@@ -480,12 +480,14 @@ func (c *Action) GetSecureCookie(name string) (string, bool) {
 		sig := parts[2]
 
 		if getCookieSig(key, []byte(val), timestamp) != sig {
+			c.SetCookie(NewCookie(name, "", -86400))
 			return "", false
 		}
 
 		ts, _ := strconv.ParseInt(timestamp, 0, 64)
 
 		if time.Now().Unix()-31*86400 > ts {
+			c.SetCookie(NewCookie(name, "", -86400))
 			return "", false
 		}
 
