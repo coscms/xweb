@@ -413,8 +413,12 @@ func (c *Action) SetCookie(cookie *http.Cookie) {
 	c.SetHeader("Set-Cookie", cookie.String())
 }
 
+func (c *Action) NewCookie(name string, value string, args ...interface{}) *http.Cookie {
+	return NewCookie(c.App.AppConfig.CookiePrefix+name, value, args...)
+}
+
 func (c *Action) GetCookie(cookieName string) (*http.Cookie, error) {
-	return c.Request.Cookie(cookieName)
+	return c.Request.Cookie(c.App.AppConfig.CookiePrefix + cookieName)
 }
 
 func (c *Action) SetSecureCookie(name string, val string, age int64) {
@@ -429,13 +433,28 @@ func (c *Action) SetSecureCookie(name string, val string, age int64) {
 	encoder.Close()
 	vs := buf.String()
 	vb := buf.Bytes()
+	key := c.App.AppConfig.CookieSecret
+	if c.App.AppConfig.CookieLimitIP {
+		key += "|" + c.IP()
+	}
+	if c.App.AppConfig.CookieLimitUA {
+		key += "|" + c.UserAgent()
+	}
 	timestamp := strconv.FormatInt(time.Now().Unix(), 10)
-	sig := getCookieSig(c.App.AppConfig.CookieSecret, vb, timestamp)
+	sig := getCookieSig(key, vb, timestamp)
 	cookie := strings.Join([]string{vs, timestamp, sig}, "|")
-	c.SetCookie(NewCookie(name, cookie, age))
+	c.SetCookie(NewCookie(c.App.AppConfig.CookiePrefix+name, cookie, age))
 }
 
 func (c *Action) GetSecureCookie(name string) (string, bool) {
+	key := c.App.AppConfig.CookieSecret
+	if c.App.AppConfig.CookieLimitIP {
+		key += "|" + c.IP()
+	}
+	if c.App.AppConfig.CookieLimitUA {
+		key += "|" + c.UserAgent()
+	}
+	name = c.App.AppConfig.CookiePrefix + name
 	for _, cookie := range c.Request.Cookies() {
 		if cookie.Name != name {
 			continue
@@ -447,7 +466,7 @@ func (c *Action) GetSecureCookie(name string) (string, bool) {
 		timestamp := parts[1]
 		sig := parts[2]
 
-		if getCookieSig(c.App.AppConfig.CookieSecret, []byte(val), timestamp) != sig {
+		if getCookieSig(key, []byte(val), timestamp) != sig {
 			return "", false
 		}
 

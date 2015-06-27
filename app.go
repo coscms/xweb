@@ -21,7 +21,7 @@ import (
 )
 
 var (
-	mapperType         = reflect.TypeOf(Mapper{})
+	mapperType = reflect.TypeOf(Mapper{})
 )
 
 const (
@@ -62,6 +62,9 @@ type AppConfig struct {
 	SessionOn         bool
 	MaxUploadSize     int64
 	CookieSecret      string
+	CookieLimitIP     bool
+	CookieLimitUA     bool
+	CookiePrefix      string
 	StaticFileVersion bool
 	CacheTemplates    bool
 	ReloadTemplates   bool
@@ -69,6 +72,7 @@ type AppConfig struct {
 	SessionTimeout    time.Duration
 	FormMapToStruct   bool
 	EnableHttpCache   bool
+	AuthBasedOnCookie bool
 }
 
 type Route struct {
