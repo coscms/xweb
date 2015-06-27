@@ -65,6 +65,7 @@ type AppConfig struct {
 	CookieLimitIP     bool
 	CookieLimitUA     bool
 	CookiePrefix      string
+	CookieDomain      string
 	StaticFileVersion bool
 	CacheTemplates    bool
 	ReloadTemplates   bool
@@ -555,7 +556,7 @@ func (a *App) run(req *http.Request, w http.ResponseWriter, route Route, args []
 
 	//验证XSRF
 	if c.Option.CheckXsrf && req.Method == "POST" {
-		res, err := req.Cookie(XSRF_TAG)
+		res, err := req.Cookie(a.AppConfig.CookiePrefix+XSRF_TAG)
 		formVals := req.Form[XSRF_TAG]
 		var formVal string
 		if len(formVals) > 0 {

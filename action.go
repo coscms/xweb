@@ -293,7 +293,7 @@ func (c *Action) XsrfValue() string {
 	cookie, err := c.GetCookie(XSRF_TAG)
 	if err != nil {
 		val = uuid.NewRandom().String()
-		c.SetCookie(NewCookie(XSRF_TAG, val, int64(c.App.AppConfig.SessionTimeout)))
+		c.SetCookie(c.NewCookie(XSRF_TAG, val, int64(c.App.AppConfig.SessionTimeout), "", "", c.IsSecure(), true))
 	} else {
 		val = cookie.Value
 	}
@@ -414,6 +414,19 @@ func (c *Action) SetCookie(cookie *http.Cookie) {
 }
 
 func (c *Action) NewCookie(name string, value string, args ...interface{}) *http.Cookie {
+	length := len(args)
+	if length<1 {
+		args = append(args,c.App.AppConfig.SessionTimeout)
+	}
+	if length<2 {
+		args = append(args,"/")
+	}
+	if length<3 {
+		args = append(args,c.App.AppConfig.CookieDomain)
+	}
+	if length<4 {
+		args = append(args,c.IsSecure())
+	}
 	return NewCookie(c.App.AppConfig.CookiePrefix+name, value, args...)
 }
 
@@ -421,7 +434,7 @@ func (c *Action) GetCookie(cookieName string) (*http.Cookie, error) {
 	return c.Request.Cookie(c.App.AppConfig.CookiePrefix + cookieName)
 }
 
-func (c *Action) SetSecureCookie(name string, val string, age int64) {
+func (c *Action) SetSecureCookie(name string, val string, args ...interface{}) {
 	//base64 encode the val
 	if len(c.App.AppConfig.CookieSecret) == 0 {
 		c.App.Error("Secret Key for secure cookies has not been set. Please assign a cookie secret to web.Config.CookieSecret.")
@@ -443,7 +456,7 @@ func (c *Action) SetSecureCookie(name string, val string, age int64) {
 	timestamp := strconv.FormatInt(time.Now().Unix(), 10)
 	sig := getCookieSig(key, vb, timestamp)
 	cookie := strings.Join([]string{vs, timestamp, sig}, "|")
-	c.SetCookie(NewCookie(c.App.AppConfig.CookiePrefix+name, cookie, age))
+	c.SetCookie(c.NewCookie(name, cookie, args...))
 }
 
 func (c *Action) GetSecureCookie(name string) (string, bool) {
