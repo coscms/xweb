@@ -5,7 +5,6 @@ import (
 	"compress/flate"
 	"compress/gzip"
 	"crypto/md5"
-	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"encoding/xml"
@@ -289,13 +288,12 @@ func (c *Action) SetBody(content []byte) error {
 }
 
 func (c *Action) XsrfValue() string {
-	var val string = ""
-	cookie, err := c.GetCookie(XSRF_TAG)
-	if err != nil {
+	c.App.XsrfManager.Init(c)
+	var name string = c.App.AppConfig.CookiePrefix + XSRF_TAG
+	var val string = c.App.XsrfManager.Get(name)
+	if val == "" {
 		val = uuid.NewRandom().String()
-		c.SetCookie(c.NewCookie(XSRF_TAG, val, int64(c.App.AppConfig.SessionTimeout), "", "", c.IsSecure(), true))
-	} else {
-		val = cookie.Value
+		c.App.XsrfManager.Set(name, val)
 	}
 	return val
 }
@@ -440,12 +438,8 @@ func (c *Action) SetSecureCookie(name string, val string, args ...interface{}) {
 		c.App.Error("Secret Key for secure cookies has not been set. Please assign a cookie secret to web.Config.CookieSecret.")
 		return
 	}
-	var buf bytes.Buffer
-	encoder := base64.NewEncoder(base64.StdEncoding, &buf)
-	encoder.Write([]byte(val))
-	encoder.Close()
-	vs := buf.String()
-	vb := buf.Bytes()
+	vs := Base64Encode(val)
+	vb := []byte(vs)
 	key := c.App.AppConfig.CookieSecret
 	if c.App.AppConfig.CookieLimitIP {
 		key += "|" + c.IP()
@@ -491,11 +485,7 @@ func (c *Action) GetSecureCookie(name string) (string, bool) {
 			return "", false
 		}
 
-		buf := bytes.NewBufferString(val)
-		encoder := base64.NewDecoder(base64.StdEncoding, buf)
-
-		res, _ := ioutil.ReadAll(encoder)
-		return string(res), true
+		return Base64Decode(val), true
 	}
 	return "", false
 }

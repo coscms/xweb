@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"crypto/hmac"
 	"crypto/sha1"
+	"encoding/base64"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -286,4 +288,19 @@ func Download(w http.ResponseWriter, fpath string) error {
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%v\"", fName))
 	_, err = io.Copy(w, f)
 	return err
+}
+
+func Base64Encode(val string) string {
+	var buf bytes.Buffer
+	encoder := base64.NewEncoder(base64.StdEncoding, &buf)
+	encoder.Write([]byte(val))
+	encoder.Close()
+	return strings.TrimRight(buf.String(), "=")
+}
+
+func Base64Decode(val string) string {
+	buf := bytes.NewBufferString(val)
+	encoder := base64.NewDecoder(base64.StdEncoding, buf)
+	res, _ := ioutil.ReadAll(encoder)
+	return string(res)
 }

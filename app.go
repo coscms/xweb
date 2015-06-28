@@ -53,6 +53,8 @@ type App struct {
 	TemplateMgr        *TemplateMgr
 	ContentEncoding    string
 	requestTime        time.Time
+	Cryptor
+	XsrfManager
 }
 
 type AppConfig struct {
@@ -118,6 +120,8 @@ func NewApp(path string, args ...string) *App {
 		filters:            make([]Filter, 0),
 		StaticVerMgr:       new(StaticVerMgr),
 		TemplateMgr:        new(TemplateMgr),
+		Cryptor:            defaultCryptor,
+		XsrfManager:        defaultXsrfManager,
 	}
 }
 
@@ -555,22 +559,23 @@ func (a *App) run(req *http.Request, w http.ResponseWriter, route Route, args []
 	}
 
 	//验证XSRF
-	if c.Option.CheckXsrf && req.Method == "POST" {
-		res, err := req.Cookie(a.AppConfig.CookiePrefix+XSRF_TAG)
-		formVals := req.Form[XSRF_TAG]
-		var formVal string
-		if len(formVals) > 0 {
-			formVal = formVals[0]
-		}
-		if err != nil || res.Value == "" || res.Value != formVal {
-			a.error(w, 500, "xsrf token error.")
-			a.Error("xsrf token error.")
-			statusCode = 500
-			isBreak = true
-			return
+	if c.Option.CheckXsrf {
+		a.XsrfManager.Init(c)
+		if req.Method == "POST" {
+			formVals := req.Form[XSRF_TAG]
+			var formVal string
+			if len(formVals) > 0 {
+				formVal = formVals[0]
+			}
+			if formVal == "" || !a.XsrfManager.Valid(a.AppConfig.CookiePrefix+XSRF_TAG, formVal) {
+				a.error(w, 500, "xsrf token error.")
+				a.Error("xsrf token error.")
+				statusCode = 500
+				isBreak = true
+				return
+			}
 		}
 	}
-
 	//执行Before方法
 	structName := reflect.ValueOf(route.HandlerElement.Name())
 	actionName := reflect.ValueOf(route.HandlerMethod)
