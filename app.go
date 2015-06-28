@@ -118,19 +118,34 @@ func NewApp(path string, args ...string) *App {
 		FuncMaps:           defaultFuncs,
 		VarMaps:            T{},
 		filters:            make([]Filter, 0),
-		StaticVerMgr:       new(StaticVerMgr),
-		TemplateMgr:        new(TemplateMgr),
+		StaticVerMgr:       DefaultStaticVerMgr,
+		TemplateMgr:        DefaultTemplateMgr,
 		Cryptor:            DefaultCryptor,
 		XsrfManager:        DefaultXsrfManager,
 	}
 }
 
 func (a *App) initApp() {
+	var isRootApp bool = a.BasePath == "/"
 	if a.AppConfig.StaticFileVersion {
-		a.StaticVerMgr.Init(a, a.AppConfig.StaticDir)
+		if isRootApp || a.Server.RootApp.AppConfig.StaticDir != a.AppConfig.StaticDir {
+			if !isRootApp {
+				a.StaticVerMgr = new(StaticVerMgr)
+			}
+			a.StaticVerMgr.Init(a, a.AppConfig.StaticDir)
+		} else {
+			a.StaticVerMgr = a.Server.RootApp.StaticVerMgr
+		}
 	}
 	if a.AppConfig.CacheTemplates {
-		a.TemplateMgr.Init(a, a.AppConfig.TemplateDir, a.AppConfig.ReloadTemplates)
+		if isRootApp || a.Server.RootApp.AppConfig.TemplateDir != a.AppConfig.TemplateDir {
+			if !isRootApp {
+				a.TemplateMgr = new(TemplateMgr)
+			}
+			a.TemplateMgr.Init(a, a.AppConfig.TemplateDir, a.AppConfig.ReloadTemplates)
+		} else {
+			a.TemplateMgr = a.Server.RootApp.TemplateMgr
+		}
 	}
 	a.FuncMaps["StaticUrl"] = a.StaticUrl
 	a.FuncMaps["XsrfName"] = XsrfName

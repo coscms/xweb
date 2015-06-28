@@ -11,6 +11,8 @@ import (
 	"github.com/howeyc/fsnotify"
 )
 
+var DefaultStaticVerMgr *StaticVerMgr = new(StaticVerMgr)
+
 type StaticVerMgr struct {
 	Caches  map[string]string
 	mutex   *sync.Mutex

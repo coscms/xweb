@@ -39,10 +39,10 @@ var (
 		"Html":       Html,
 		"Js":         Js,
 		"Css":        Css,
-		"XsrfField":  XsrfName,//alias
+		"XsrfField":  XsrfName, //alias
 	}
+	DefaultTemplateMgr *TemplateMgr = new(TemplateMgr)
 )
-
 
 func IsNil(a interface{}) bool {
 	switch a.(type) {
