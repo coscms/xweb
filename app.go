@@ -120,8 +120,8 @@ func NewApp(path string, args ...string) *App {
 		filters:            make([]Filter, 0),
 		StaticVerMgr:       new(StaticVerMgr),
 		TemplateMgr:        new(TemplateMgr),
-		Cryptor:            defaultCryptor,
-		XsrfManager:        defaultXsrfManager,
+		Cryptor:            DefaultCryptor,
+		XsrfManager:        DefaultXsrfManager,
 	}
 }
 

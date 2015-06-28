@@ -16,7 +16,7 @@ type AesCrypto struct {
 	key map[string][]byte
 }
 
-var defaultCryptor = &AesCrypto{key: make(map[string][]byte, 0)}
+var DefaultCryptor Cryptor = &AesCrypto{key: make(map[string][]byte, 0)}
 
 const (
 	aesKeyLen = 128

@@ -7,7 +7,7 @@ type XsrfManager interface {
 	Valid(key, val string) bool
 }
 
-var defaultXsrfManager = &XsrfCookieStorage{}
+var DefaultXsrfManager XsrfManager = &XsrfCookieStorage{}
 
 type XsrfCookieStorage struct {
 	*Action
