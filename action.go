@@ -15,6 +15,7 @@ import (
 	"io/ioutil"
 	"mime"
 	"mime/multipart"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -98,9 +99,9 @@ func (c *Action) Domain() string {
 // if no host info in request, return localhost.
 func (c *Action) Host() string {
 	if c.Request.Host != "" {
-		hostParts := strings.Split(c.Request.Host, ":")
+		hostParts, _, _ := net.SplitHostPort(c.Request.Host)
 		if len(hostParts) > 0 {
-			return hostParts[0]
+			return hostParts
 		}
 		return c.Request.Host
 	}
@@ -132,21 +133,26 @@ func (c *Action) IsUpload() bool {
 	return c.Request.MultipartForm != nil
 }
 
-// IP returns request client ip.
-// if in proxy, return first proxy id.
-// if error, return 127.0.0.1.
+// ClientIP implements a best effort algorithm to return the real client IP, it parses
+// X-Real-IP and X-Forwarded-For in order to work properly with reverse-proxies such us: nginx or haproxy.
 func (c *Action) IP() string {
-	ips := c.Proxy()
-	if len(ips) > 0 && ips[0] != "" {
-		return ips[0]
-	}
-	ip := strings.Split(c.Request.RemoteAddr, ":")
+	ip := strings.TrimSpace(c.Header("X-Real-Ip"))
 	if len(ip) > 0 {
-		if ip[0] != "[" {
-			return ip[0]
+		return ip
+	}
+	ip = c.Header("X-Forwarded-For")
+	if ip != "" {
+		if index := strings.IndexByte(ip, ','); index >= 0 {
+			ip = ip[0:index]
+		}
+		ip = strings.TrimSpace(ip)
+		if len(ip) > 0 {
+			return ip
 		}
 	}
-	return "127.0.0.1"
+	ip = strings.TrimSpace(c.Request.RemoteAddr)
+	ip, _, _ = net.SplitHostPort(ip)
+	return ip
 }
 
 // Proxy returns proxy client ips slice.
