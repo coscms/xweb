@@ -60,6 +60,7 @@ type Validation struct {
 
 func (v *Validation) Clear() {
 	v.Errors = []*ValidationError{}
+	v.ErrorsMap = nil
 }
 
 func (v *Validation) HasErrors() bool {
