@@ -28,7 +28,7 @@ import (
  * XwebVer      —— string
  */
 var (
-	defaultFuncs template.FuncMap = template.FuncMap{
+	DefaultFuncs template.FuncMap = template.FuncMap{
 		"Now":        Now,
 		"Eq":         Eq,
 		"FormatDate": FormatDate,

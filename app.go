@@ -115,7 +115,7 @@ func NewApp(path string, args ...string) *App {
 		ActionsPath:        map[reflect.Type]string{},
 		ActionsNamePath:    map[string]string{},
 		ActionsMethodRoute: make(map[string]map[string]string),
-		FuncMaps:           defaultFuncs,
+		FuncMaps:           DefaultFuncs,
 		VarMaps:            T{},
 		filters:            make([]Filter, 0),
 		StaticVerMgr:       DefaultStaticVerMgr,
