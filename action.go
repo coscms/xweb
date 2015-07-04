@@ -591,10 +591,9 @@ func (c *Action) Include(tmplName string) interface{} {
 	}
 
 	constr := string(content)
-	//[SWH|+]call hook
-	if r, err := XHook.Call("BeforeRender", constr, c); err == nil {
-		constr = XHook.String(r[0])
-	}
+
+	Event("BeforeRender", []interface{}{c, &constr}, func(_ bool) {})
+
 	tmpl, err := t.Parse(constr)
 	if err != nil {
 		c.Errorf("Parse %v err: %v", tmplName, err)
@@ -635,10 +634,8 @@ func (c *Action) NamedRender(name, content string, params ...*T) error {
 	c.RootTemplate = template.New(name)
 	c.RootTemplate.Funcs(c.GetFuncs())
 
-	//[SWH|+]call hook
-	if r, err := XHook.Call("BeforeRender", content, c); err == nil {
-		content = XHook.String(r[0])
-	}
+	Event("BeforeRender", []interface{}{c, &content}, func(_ bool) {})
+
 	tmpl, err := c.RootTemplate.Parse(content)
 	if err == nil {
 		newbytes := bytes.NewBufferString("")
@@ -646,13 +643,11 @@ func (c *Action) NamedRender(name, content string, params ...*T) error {
 		if err == nil {
 			tplcontent, err := ioutil.ReadAll(newbytes)
 			if err == nil {
-				//[SWH|+]call hook
-				if r, err := XHook.Call("AfterRender", tplcontent, c); err == nil {
-					if ret := XHook.Value(r, 0); ret != nil {
-						tplcontent = ret.([]byte)
+				Event("AfterRender", []interface{}{c, &tplcontent}, func(result bool) {
+					if result {
+						err = c.SetBody(tplcontent)
 					}
-				}
-				err = c.SetBody(tplcontent)
+				})
 			}
 		}
 	}

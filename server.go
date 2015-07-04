@@ -44,6 +44,9 @@ type Server struct {
 	RootApp        *App
 	Logger         *log.Logger
 	Env            map[string]interface{}
+
+	http.ResponseWriter
+	*http.Request
 	//save the listener so it can be closed
 	l net.Listener
 }
@@ -139,35 +142,38 @@ func (s *Server) initServer() {
 }
 
 // ServeHTTP is the interface method for Go's http server package
-func (s *Server) ServeHTTP(c http.ResponseWriter, req *http.Request) {
-	s.Process(c, req)
+func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	s.ResponseWriter = w
+	s.Request = req
+	s.Process()
 }
 
 // Process invokes the routing system for server s
 // non-root app's route will override root app's if there is same path
-func (s *Server) Process(w http.ResponseWriter, req *http.Request) {
-	var result bool = true
-	_, _ = XHook.Call("BeforeProcess", &result, s, w, req)
-	if !result {
-		return
-	}
-	if s.Config.UrlSuffix != "" && strings.HasSuffix(req.URL.Path, s.Config.UrlSuffix) {
-		req.URL.Path = strings.TrimSuffix(req.URL.Path, s.Config.UrlSuffix)
-	}
-	if s.Config.UrlPrefix != "" && strings.HasPrefix(req.URL.Path, "/"+s.Config.UrlPrefix) {
-		req.URL.Path = strings.TrimPrefix(req.URL.Path, "/"+s.Config.UrlPrefix)
-	}
-	if req.URL.Path[0] != '/' {
-		req.URL.Path = "/" + req.URL.Path
-	}
-	for _, app := range s.Apps {
-		if app != s.RootApp && strings.HasPrefix(req.URL.Path, app.BasePath) {
-			app.routeHandler(req, w)
+func (s *Server) Process() {
+	Event("ServerProcess", s, func(result bool) {
+		if !result {
 			return
 		}
-	}
-	s.RootApp.routeHandler(req, w)
-	_, _ = XHook.Call("AfterProcess", &result, s, w, req)
+		w := s.ResponseWriter
+		req := s.Request
+		if s.Config.UrlSuffix != "" && strings.HasSuffix(req.URL.Path, s.Config.UrlSuffix) {
+			req.URL.Path = strings.TrimSuffix(req.URL.Path, s.Config.UrlSuffix)
+		}
+		if s.Config.UrlPrefix != "" && strings.HasPrefix(req.URL.Path, "/"+s.Config.UrlPrefix) {
+			req.URL.Path = strings.TrimPrefix(req.URL.Path, "/"+s.Config.UrlPrefix)
+		}
+		if req.URL.Path[0] != '/' {
+			req.URL.Path = "/" + req.URL.Path
+		}
+		for _, app := range s.Apps {
+			if app != s.RootApp && strings.HasPrefix(req.URL.Path, app.BasePath) {
+				app.routeHandler(req, w)
+				return
+			}
+		}
+		s.RootApp.routeHandler(req, w)
+	})
 }
 
 // Run starts the web application and serves HTTP requests for s
@@ -206,12 +212,11 @@ func (s *Server) Run(addr string) {
 
 	}
 
-	if c, err := XHook.Call("MuxHandle", mux); err == nil {
-		if ret := XHook.Value(c, 0); ret != nil {
-			mux = ret.(*http.ServeMux)
+	Event("MuxHandle", mux, func(result bool) {
+		if result {
+			mux.Handle("/", s)
 		}
-	}
-	mux.Handle("/", s)
+	})
 
 	s.Logger.Infof("http server is listening %s", addr)
 

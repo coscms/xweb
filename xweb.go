@@ -48,8 +48,10 @@ func Error(w http.ResponseWriter, status int, content string) error {
 }
 
 // Process invokes the main server's routing system.
-func Process(c http.ResponseWriter, req *http.Request) {
-	mainServer.Process(c, req)
+func Process(w http.ResponseWriter, req *http.Request) {
+	mainServer.ResponseWriter = w
+	mainServer.Request = req
+	mainServer.Process()
 }
 
 // Run starts the web application and serves HTTP requests for the main server.
@@ -122,10 +124,6 @@ func AddApp(a *App) {
 
 func AddConfig(name string, value interface{}) {
 	mainServer.AddConfig(name, value)
-}
-
-func AddHook(name string, fns ...interface{}) {
-	XHook.Bind(name, fns...)
 }
 
 func SetTemplateDir(dir string) {

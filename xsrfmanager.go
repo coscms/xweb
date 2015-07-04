@@ -31,9 +31,7 @@ func (c *XsrfCookieStorage) Valid(key, val string) bool {
 }
 
 func (c *XsrfCookieStorage) Init(a *Action) {
-	if c.Action == nil {
-		c.Action = a
-	}
+	c.Action = a
 }
 
 type XsrfSessionStorage struct {
@@ -53,7 +51,5 @@ func (c *XsrfSessionStorage) Valid(key, val string) bool {
 }
 
 func (c *XsrfSessionStorage) Init(a *Action) {
-	if c.Action == nil {
-		c.Action = a
-	}
+	c.Action = a
 }
