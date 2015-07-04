@@ -36,7 +36,7 @@ type EventsInstance struct {
 /*
 注册事件
 [Examle:]
-AddEvent("AfterResponse", func(session interface{}, next func(bool)) {
+Events.Register("AfterResponse", func(session interface{}, next func(bool)) {
 	log.Println("Got AfterResponse event!")
 	isSuccess := true
 	next(isSuccess) //这里的next函数无论什么情况下必须执行。
@@ -62,13 +62,13 @@ func (e *EventsInstance) Register(eventName string, handler func(interface{}, fu
 /*
 并发执行事件
 [Examle 1:]
-Event("AfterHandler", session, func() {//此匿名函数在本事件的最后执行
+Events.GoExecute("AfterHandler", session, func(_ bool) {//此匿名函数在本事件的最后执行
 	session.Response.Send()
 	session.Response.Close()
 })
 
 [Examle 2:]
-Event("AfterResponse", session, func() {})
+Events.Execute("AfterResponse", session, func(_ bool) {})
 */
 func (e *EventsInstance) GoExecute(eventName string, session interface{}, next func(bool)) {
 	if e.listeners == nil {
