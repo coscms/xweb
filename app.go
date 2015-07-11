@@ -25,9 +25,9 @@ var (
 )
 
 const (
-	XSRF_TAG string = "_xsrf"
-	Debug           = iota + 1
+	Debug = iota + 1
 	Product
+	XSRF_TAG string = "_xsrf"
 )
 
 type App struct {
