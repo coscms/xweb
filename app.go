@@ -16,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/coscms/tagfast"
 	"github.com/coscms/xweb/httpsession"
 	"github.com/coscms/xweb/log"
 )
@@ -802,8 +803,8 @@ func (a *App) TryServingFile(name string, req *http.Request, w http.ResponseWrit
 }
 
 // StructMap function mapping params to controller's properties
-func (a *App) StructMap(vc reflect.Value, r *http.Request) error {
-	return a.namedStructMap(vc, r, "")
+func (a *App) StructMap(m interface{}, r *http.Request) error {
+	return a.namedStructMap(m, r, "")
 }
 
 // user[name][test]
@@ -845,7 +846,9 @@ func SplitJson(s string) ([]string, error) {
 	return res, nil
 }
 
-func (a *App) namedStructMap(vc reflect.Value, r *http.Request, topName string) error {
+func (a *App) namedStructMap(m interface{}, r *http.Request, topName string) error {
+	vc := reflect.ValueOf(m).Elem()
+	tc := reflect.TypeOf(m).Elem()
 	for k, t := range r.Form {
 		if k == XSRF_TAG || k == "" {
 			continue
@@ -888,7 +891,9 @@ func (a *App) namedStructMap(vc reflect.Value, r *http.Request, topName string) 
 					a.Warnf("can not set %v -> %v", name, value.Interface())
 					break
 				}
-
+				if tagfast.Tag2(tc, name, "form_options") == "-" {
+					continue
+				}
 				if value.Kind() == reflect.Ptr {
 					if value.IsNil() {
 						value.Set(reflect.New(value.Type().Elem()))
@@ -908,7 +913,9 @@ func (a *App) namedStructMap(vc reflect.Value, r *http.Request, topName string) 
 					a.Warnf("can not set %v to %v", k, tv)
 					break
 				}
-
+				if tagfast.Tag2(tc, name, "form_options") == "-" {
+					continue
+				}
 				if tv.Kind() == reflect.Ptr {
 					tv.Set(reflect.New(tv.Type().Elem()))
 					tv = tv.Elem()
