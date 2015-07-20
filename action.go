@@ -245,7 +245,8 @@ func (c *Action) HttpCache(content []byte) bool {
 		h := c.ResponseWriter.Header()
 		delete(h, "Content-Type")
 		delete(h, "Content-Length")
-		c.ResponseWriter.WriteHeader(http.StatusNotModified)
+		//c.ResponseWriter.WriteHeader(http.StatusNotModified)
+		c.NotModified()
 		return true
 	}
 	c.SetHeader("Etag", Etag)
