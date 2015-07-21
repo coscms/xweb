@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/howeyc/fsnotify"
@@ -14,11 +15,13 @@ import (
 var DefaultStaticVerMgr *StaticVerMgr = new(StaticVerMgr)
 
 type StaticVerMgr struct {
-	Caches  map[string]string
-	mutex   *sync.Mutex
-	Path    string
-	Ignores map[string]bool
-	app     *App
+	Caches   map[string]string
+	Combined map[string][]string
+	Combines map[string]bool
+	mutex    *sync.Mutex
+	Path     string
+	Ignores  map[string]bool
+	app      *App
 }
 
 func (self *StaticVerMgr) Moniter(staticPath string) error {
@@ -54,14 +57,16 @@ func (self *StaticVerMgr) Moniter(staticPath string) error {
 					if d.IsDir() {
 						watcher.RemoveWatch(ev.Name)
 					} else {
-						pa := ev.Name[len(self.Path)+1:]
-						self.CacheDelete(pa)
+						url := ev.Name[len(self.Path)+1:]
+						self.CacheDelete(url)
+						self.DeleteCombined(url)
 					}
 				} else if ev.IsModify() {
 					if d.IsDir() {
 					} else {
 						url := ev.Name[len(staticPath)+1:]
 						self.CacheItem(url)
+						self.DeleteCombined(url)
 					}
 				} else if ev.IsRename() {
 					if d.IsDir() {
@@ -69,6 +74,7 @@ func (self *StaticVerMgr) Moniter(staticPath string) error {
 					} else {
 						url := ev.Name[len(staticPath)+1:]
 						self.CacheDelete(url)
+						self.DeleteCombined(url)
 					}
 				}
 			case err := <-watcher.Error:
@@ -98,6 +104,8 @@ func (self *StaticVerMgr) Moniter(staticPath string) error {
 func (self *StaticVerMgr) Init(app *App, staticPath string) error {
 	self.Path = staticPath
 	self.Caches = make(map[string]string)
+	self.Combined = make(map[string][]string)
+	self.Combines = make(map[string]bool)
 	self.mutex = &sync.Mutex{}
 	self.Ignores = map[string]bool{".DS_Store": true}
 	self.app = app
@@ -145,6 +153,7 @@ func (self *StaticVerMgr) CacheAll(staticPath string) error {
 			return nil
 		}
 		rp := f[len(staticPath)+1:]
+		rp = strings.Replace(rp, "\\", "/", -1)
 		if _, ok := self.Ignores[filepath.Base(rp)]; !ok {
 			self.Caches[rp] = self.getFileVer(rp)
 		}
@@ -169,6 +178,7 @@ func (self *StaticVerMgr) GetVersion(url string) string {
 }
 
 func (self *StaticVerMgr) CacheDelete(url string) {
+	url = strings.Replace(url, "\\", "/", -1)
 	self.mutex.Lock()
 	defer self.mutex.Unlock()
 	delete(self.Caches, url)
@@ -176,7 +186,7 @@ func (self *StaticVerMgr) CacheDelete(url string) {
 }
 
 func (self *StaticVerMgr) CacheItem(url string) {
-	fmt.Println(url)
+	url = strings.Replace(url, "\\", "/", -1)
 	ver := self.getFileVer(url)
 	if ver != "" {
 		self.mutex.Lock()
@@ -184,4 +194,50 @@ func (self *StaticVerMgr) CacheItem(url string) {
 		self.Caches[url] = ver
 		self.app.Infof("static file %s is created.", url)
 	}
+}
+
+func (self *StaticVerMgr) DeleteCombined(url string) {
+	url = "/" + strings.Replace(url, "\\", "/", -1)
+	self.mutex.Lock()
+	defer self.mutex.Unlock()
+	if val, ok := self.Combined[url]; ok {
+		for _, v := range val {
+			err := os.Remove(self.app.AppConfig.StaticDir + v)
+			delete(self.Combines, v)
+			if err != nil {
+				fmt.Println(err)
+			}
+		}
+	}
+}
+
+func (self *StaticVerMgr) RecordCombined(fromUrl string, combineUrl string) {
+	if self.Combined == nil {
+		return
+	}
+	self.mutex.Lock()
+	defer self.mutex.Unlock()
+	if _, ok := self.Combined[fromUrl]; !ok {
+		self.Combined[fromUrl] = make([]string, 0)
+	}
+	self.Combined[fromUrl] = append(self.Combined[fromUrl], combineUrl)
+}
+
+func (self *StaticVerMgr) RecordCombines(combineUrl string) {
+	if self.Combines == nil {
+		return
+	}
+	self.mutex.Lock()
+	defer self.mutex.Unlock()
+	self.Combines[combineUrl] = true
+}
+
+func (self *StaticVerMgr) IsCombined(combineUrl string) (ok bool) {
+	if self.Combines == nil {
+		return
+	}
+	self.mutex.Lock()
+	defer self.mutex.Unlock()
+	_, ok = self.Combines[combineUrl]
+	return
 }
