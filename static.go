@@ -202,6 +202,9 @@ func (self *StaticVerMgr) DeleteCombined(url string) {
 	defer self.mutex.Unlock()
 	if val, ok := self.Combined[url]; ok {
 		for _, v := range val {
+			if _, ok = self.Combines[v]; !ok {
+				continue
+			}
 			err := os.Remove(self.app.AppConfig.StaticDir + v)
 			delete(self.Combines, v)
 			if err != nil {
