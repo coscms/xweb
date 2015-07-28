@@ -111,8 +111,7 @@ func (self *StaticVerMgr) Init(app *App, staticPath string) error {
 	self.app = app
 
 	if dirExists(staticPath) {
-		self.CacheAll(staticPath)
-
+		//self.CacheAll(staticPath)
 		go self.Moniter(staticPath)
 	}
 
@@ -147,7 +146,7 @@ func (self *StaticVerMgr) getFileVer(url string) string {
 func (self *StaticVerMgr) CacheAll(staticPath string) error {
 	self.mutex.Lock()
 	defer self.mutex.Unlock()
-	//fmt.Print("Getting static file version number, please wait... ")
+	fmt.Print("Getting static file version number, please wait... ")
 	err := filepath.Walk(staticPath, func(f string, info os.FileInfo, err error) error {
 		if info.IsDir() {
 			return nil
@@ -159,7 +158,7 @@ func (self *StaticVerMgr) CacheAll(staticPath string) error {
 		}
 		return nil
 	})
-	//fmt.Println("Complete.")
+	fmt.Println("Complete.")
 	return err
 }
 
@@ -181,8 +180,10 @@ func (self *StaticVerMgr) CacheDelete(url string) {
 	url = strings.Replace(url, "\\", "/", -1)
 	self.mutex.Lock()
 	defer self.mutex.Unlock()
-	delete(self.Caches, url)
-	self.app.Infof("static file %s is deleted.\n", url)
+	if _, ok := self.Caches[url]; ok {
+		delete(self.Caches, url)
+		self.app.Infof("static file %s is deleted.\n", url)
+	}
 }
 
 func (self *StaticVerMgr) CacheItem(url string) {

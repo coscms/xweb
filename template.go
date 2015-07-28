@@ -338,7 +338,7 @@ func (self *TemplateMgr) Moniter(rootDir string) error {
 func (self *TemplateMgr) CacheAll(rootDir string) error {
 	self.mutex.Lock()
 	defer self.mutex.Unlock()
-	//fmt.Print("Reading the contents of the template files, please wait... ")
+	fmt.Print("Reading the contents of the template files, please wait... ")
 	err := filepath.Walk(rootDir, func(f string, info os.FileInfo, err error) error {
 		if info.IsDir() {
 			return nil
@@ -357,7 +357,7 @@ func (self *TemplateMgr) CacheAll(rootDir string) error {
 		}
 		return nil
 	})
-	//fmt.Println("Complete.")
+	fmt.Println("Complete.")
 	return err
 }
 
@@ -368,8 +368,7 @@ func (self *TemplateMgr) Init(app *App, rootDir string, reload bool) error {
 	self.mutex = &sync.Mutex{}
 	self.app = app
 	if dirExists(rootDir) {
-		self.CacheAll(rootDir)
-
+		//self.CacheAll(rootDir)
 		if reload {
 			go self.Moniter(rootDir)
 		}
@@ -414,7 +413,9 @@ func (self *TemplateMgr) CacheDelete(tmpl string) {
 	self.mutex.Lock()
 	defer self.mutex.Unlock()
 	tmpl = strings.Replace(tmpl, "\\", "/", -1)
-	self.app.Debugf("delete template %v from cache", tmpl)
-	delete(self.Caches, tmpl)
+	if _, ok := self.Caches[tmpl]; ok {
+		self.app.Debugf("delete template %v from cache", tmpl)
+		delete(self.Caches, tmpl)
+	}
 	return
 }
