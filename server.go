@@ -32,13 +32,13 @@ type ServerConfig struct {
 	SessionTimeout         time.Duration
 }
 
-var ServerNumber uint = 0
-
 // Server represents a xweb server.
 type Server struct {
 	Config         *ServerConfig
-	Apps           map[string]*App
-	AppsNamePath   map[string]string
+	Apps           map[string]*App   //r["root"]
+	App2Domain     map[string]string //r["www.coscms.com"]="root"
+	Domain2App     map[string]string //r["root"]="www.coscms.com"
+	AppsNamePath   map[string]string //r["root"]="/"
 	Name           string
 	SessionManager *httpsession.Manager
 	RootApp        *App
@@ -51,18 +51,13 @@ type Server struct {
 	l net.Listener
 }
 
-func NewServer(args ...string) *Server {
-	name := ""
-	if len(args) == 1 {
-		name = args[0]
-	} else {
-		name = fmt.Sprintf("Server%d", ServerNumber)
-		ServerNumber++
-	}
+func NewServer(name string) *Server {
 	s := &Server{
 		Config:       Config,
 		Env:          map[string]interface{}{},
 		Apps:         map[string]*App{},
+		App2Domain:   map[string]string{},
+		Domain2App:   map[string]string{},
 		AppsNamePath: map[string]string{},
 		Name:         name,
 	}
@@ -85,6 +80,7 @@ func (s *Server) AddApp(a *App) {
 
 	a.Server = s
 	a.Logger = s.Logger
+
 	if a.BasePath == "/" {
 		s.RootApp = a
 	}
@@ -165,6 +161,28 @@ func (s *Server) Process() {
 		}
 		if req.URL.Path[0] != '/' {
 			req.URL.Path = "/" + req.URL.Path
+		}
+		var hostKey string
+		if host, port, err := net.SplitHostPort(req.Host); err != nil {
+			fmt.Println(err)
+		} else if port != "80" {
+			hostKey = req.Host
+		} else {
+			hostKey = host
+		}
+		var appName string
+		if v, ok := s.Domain2App[hostKey]; ok {
+			appName = v
+		} else if v, ok := s.Domain2App["//"+hostKey]; ok {
+			appName = v
+		} else if v, ok := s.Domain2App[req.URL.Scheme+"://"+hostKey]; ok {
+			appName = v
+		}
+		if appName != "" {
+			if app := s.App(appName); app != nil {
+				app.routeHandler(req, w)
+				return
+			}
 		}
 		for _, app := range s.Apps {
 			if app != s.RootApp && strings.HasPrefix(req.URL.Path, app.BasePath) {

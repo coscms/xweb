@@ -34,8 +34,9 @@ const (
 type App struct {
 	BasePath           string
 	Name               string
+	Domain             string
 	Routes             []Route
-	RoutesEq           map[string]map[string]Route
+	RoutesEq           map[string]map[string]Route //r["/example"]["POST"]
 	filters            []Filter
 	Server             *Server
 	AppConfig          *AppConfig
@@ -87,13 +88,7 @@ type Route struct {
 	HandlerElement reflect.Type    //handler element
 }
 
-func NewApp(path string, args ...string) *App {
-	name := ""
-	if len(args) == 0 {
-		name = strings.Replace(path, "/", "_", -1)
-	} else {
-		name = args[0]
-	}
+func NewApp(path string, name string) *App {
 	return &App{
 		BasePath: path,
 		Name:     name,
@@ -169,6 +164,20 @@ func (a *App) initApp() {
 	}
 }
 
+func (a *App) DelDomain() {
+	a.Domain = ""
+	if domain, ok := a.Server.App2Domain[a.Name]; ok {
+		delete(a.Server.App2Domain, a.Name)
+		delete(a.Server.Domain2App, domain)
+	}
+}
+
+func (a *App) SetDomain(domain string) {
+	a.Domain = domain
+	a.Server.App2Domain[a.Name] = domain
+	a.Server.Domain2App[domain] = a.Name
+}
+
 func (a *App) SetStaticDir(dir string) {
 	a.AppConfig.StaticDir = dir
 }
@@ -194,8 +203,15 @@ func (app *App) GetConfig(name string) interface{} {
 }
 
 func (app *App) AddAction(cs ...interface{}) {
+	/*
+		basePath := app.BasePath
+		fmt.Println(app.Name, "=", app.Domain)
+		if app.Domain != "" {
+			basePath = "/"
+		}
+	*/
 	for _, c := range cs {
-		app.AddRouter(app.BasePath, c)
+		app.AddRouter("/", c)
 	}
 }
 
@@ -205,7 +221,7 @@ func (app *App) AutoAction(cs ...interface{}) {
 		name := t.Name()
 		if strings.HasSuffix(name, "Action") {
 			path := strings.ToLower(name[:len(name)-6])
-			app.AddRouter(JoinPath(app.BasePath, path), c)
+			app.AddRouter("/"+path, c)
 		} else {
 			app.Warn("AutoAction needs a named ends with Action")
 		}
@@ -471,6 +487,9 @@ func (a *App) routeHandler(req *http.Request, w http.ResponseWriter) {
 	requestPath = req.URL.Path //支持filter更改req.URL.Path
 
 	reqPath := removeStick(requestPath)
+	if a.Domain == "" && a.BasePath != "/" {
+		reqPath = "/" + strings.TrimPrefix(reqPath, a.BasePath)
+	}
 	allowMethod := Ternary(req.Method == "HEAD", "GET", req.Method).(string)
 	isFind := false
 	if routes, ok := a.RoutesEq[reqPath]; ok {

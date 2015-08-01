@@ -35,6 +35,7 @@ var (
 		"Add":        Add,
 		"Subtract":   Subtract,
 		"IsNil":      IsNil,
+		"Url":        Url,
 		"UrlFor":     UrlFor,
 		"Html":       Html,
 		"Js":         Js,
@@ -184,6 +185,68 @@ func Css(raw string) template.CSS {
 	return template.CSS(raw)
 }
 
+//Usage:UrlFor("main:root:/user/login","appName","servName") or UrlFor("/user/login","appName") or UrlFor("/user/login") or UrlFor()
+func Url(args ...string) string {
+	var (
+		route    string
+		appName  string = "root"
+		servName string = "main"
+	)
+	size := len(args)
+	switch size {
+	case 1:
+		route = args[0]
+	case 2:
+		route = args[0]
+		appName = args[1]
+	case 3:
+		route = args[0]
+		appName = args[1]
+		servName = args[2]
+	}
+	var appUrl, url, prefix, suffix string
+	if server, ok := Servers[servName]; ok {
+		prefix = server.Config.UrlPrefix
+		suffix = server.Config.UrlSuffix
+		var appDomain string
+		if domain, ok := server.App2Domain[appName]; ok {
+			appUrl = "/"
+			appDomain = domain
+		} else if appPath, ok := server.AppsNamePath[appName]; ok {
+			appUrl = appPath
+		}
+		if appDomain != "" {
+			if strings.Contains(appDomain, "//") {
+				url = appDomain
+			} else {
+				url = "http://" + appDomain
+			}
+		} else {
+			url = server.Config.Url
+		}
+	}
+	url = strings.TrimRight(url, "/") + "/"
+	if size == 0 {
+		return url
+	}
+	if appUrl != "/" {
+		appUrl = strings.TrimLeft(appUrl, "/")
+		if length := len(appUrl); length > 0 && appUrl[length-1] != '/' {
+			appUrl = appUrl + "/"
+		}
+	} else {
+		appUrl = ""
+	}
+	url += prefix + appUrl
+	if route == "" {
+		return url
+	}
+	if strings.HasSuffix(route, "/") == false {
+		url += strings.TrimLeft(route, "/") + suffix
+	}
+	return url
+}
+
 //Usage:UrlFor("main:root:/user/login") or UrlFor("root:/user/login") or UrlFor("/user/login") or UrlFor()
 //这里的main代表Server名称；root代表App名称；后面的内容为Action中方法函数所对应的网址
 func UrlFor(args ...string) string {
@@ -209,11 +272,23 @@ func UrlFor(args ...string) string {
 	}
 	var url, prefix, suffix string
 	if server, ok := Servers[s[0]]; ok {
-		url += server.Config.Url
 		prefix = server.Config.UrlPrefix
 		suffix = server.Config.UrlSuffix
-		if appPath, ok := server.AppsNamePath[s[1]]; ok {
+		var appDomain string
+		if domain, ok := server.App2Domain[s[1]]; ok {
+			appUrl = "/"
+			appDomain = domain
+		} else if appPath, ok := server.AppsNamePath[s[1]]; ok {
 			appUrl = appPath
+		}
+		if appDomain != "" {
+			if strings.Contains(appDomain, "//") {
+				url = appDomain
+			} else {
+				url = "http://" + appDomain
+			}
+		} else {
+			url = server.Config.Url
 		}
 	}
 	url = strings.TrimRight(url, "/") + "/"
