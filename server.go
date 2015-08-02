@@ -2,7 +2,6 @@ package xweb
 
 import (
 	"crypto/tls"
-	"fmt"
 	"net"
 	"net/http"
 	"net/http/pprof"
@@ -36,8 +35,8 @@ type ServerConfig struct {
 type Server struct {
 	Config         *ServerConfig
 	Apps           map[string]*App   //r["root"]
-	App2Domain     map[string]string //r["www.coscms.com"]="root"
-	Domain2App     map[string]string //r["root"]="www.coscms.com"
+	App2Domain     map[string]string //r["root"]="www.coscms.com"
+	Domain2App     map[string]string //r["www.coscms.com"]="root"
 	AppsNamePath   map[string]string //r["root"]="/"
 	Name           string
 	SessionManager *httpsession.Manager
@@ -162,26 +161,26 @@ func (s *Server) Process() {
 		if req.URL.Path[0] != '/' {
 			req.URL.Path = "/" + req.URL.Path
 		}
-		var hostKey string
-		if host, port, err := net.SplitHostPort(req.Host); err != nil {
-			fmt.Println(err)
-		} else if port != "80" {
-			hostKey = req.Host
-		} else {
-			hostKey = host
-		}
-		var appName string
-		if v, ok := s.Domain2App[hostKey]; ok {
-			appName = v
-		} else if v, ok := s.Domain2App["//"+hostKey]; ok {
-			appName = v
-		} else if v, ok := s.Domain2App[req.URL.Scheme+"://"+hostKey]; ok {
-			appName = v
-		}
-		if appName != "" {
-			if app := s.App(appName); app != nil {
-				app.routeHandler(req, w)
-				return
+		if len(s.Domain2App) > 0 {
+			var hostKey string
+			if pos := strings.LastIndex(req.Host, ":"); pos <= 0 || req.Host[pos+1:] != "80" {
+				hostKey = req.Host
+			} else {
+				hostKey = req.Host[0:pos]
+			}
+			var appName string
+			if v, ok := s.Domain2App[hostKey]; ok {
+				appName = v
+			} else if v, ok := s.Domain2App["//"+hostKey]; ok {
+				appName = v
+			} else if v, ok := s.Domain2App[req.URL.Scheme+"://"+hostKey]; ok {
+				appName = v
+			}
+			if appName != "" {
+				if app := s.App(appName); app != nil {
+					app.routeHandler(req, w)
+					return
+				}
 			}
 		}
 		for _, app := range s.Apps {

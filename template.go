@@ -185,7 +185,7 @@ func Css(raw string) template.CSS {
 	return template.CSS(raw)
 }
 
-//Usage:UrlFor("main:root:/user/login","appName","servName") or UrlFor("/user/login","appName") or UrlFor("/user/login") or UrlFor()
+//Usage:UrlFor("/user/login","appName","servName") or UrlFor("/user/login","appName") or UrlFor("/user/login") or UrlFor()
 func Url(args ...string) string {
 	var (
 		route    string
