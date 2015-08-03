@@ -225,8 +225,11 @@ func removeStick(uri string) string {
 }
 
 var (
-	fieldCache      = make(map[reflect.Type]map[string]int)
-	fieldCacheMutex sync.RWMutex
+	fieldCache        = make(map[reflect.Type]map[string]int)
+	fieldCacheMutex   sync.RWMutex
+	DefaultHtmlFilter = func(v string) (r string) {
+		return v
+	}
 )
 
 // this method cache fields' index to field name

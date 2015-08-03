@@ -943,6 +943,10 @@ func (a *App) namedStructMap(m interface{}, r *http.Request, topName string) err
 				var l interface{}
 				switch k := tv.Kind(); k {
 				case reflect.String:
+					switch tagfast.Tag2(tc, name, "form_filter") {
+					case "html":
+						v = DefaultHtmlFilter(v)
+					}
 					l = v
 					tv.Set(reflect.ValueOf(l))
 				case reflect.Bool:
