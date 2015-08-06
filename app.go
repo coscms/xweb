@@ -25,6 +25,12 @@ var (
 	mapperType = reflect.TypeOf(Mapper{})
 )
 
+type (
+	JSON interface{}
+	XML  interface{}
+	FILE string
+)
+
 const (
 	Debug = iota + 1
 	Product
@@ -716,12 +722,6 @@ func (a *App) run(req *http.Request, w http.ResponseWriter, route Route, args []
 	responseSize = int64(size)
 	return
 }
-
-type (
-	JSON interface{}
-	XML  interface{}
-	FILE string
-)
 
 func (a *App) error(w http.ResponseWriter, status int, content string) error {
 	w.WriteHeader(status)
