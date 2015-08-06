@@ -675,6 +675,20 @@ func (a *App) run(req *http.Request, w http.ResponseWriter, route Route, args []
 		content = []byte(sval.String())
 	} else if sval.Kind() == reflect.Slice && sval.Type().Elem().Kind() == reflect.Uint8 {
 		content = sval.Interface().([]byte)
+	} else if obj, ok := sval.Interface().(JSON); ok {
+		c.ServeJson(obj)
+		responseSize = c.ResponseSize
+		isBreak = true
+		return
+	} else if obj, ok := sval.Interface().(XML); ok {
+		c.ServeXml(obj)
+		responseSize = c.ResponseSize
+		isBreak = true
+		return
+	} else if file, ok := sval.Interface().(FILE); ok {
+		c.ServeFile(string(file))
+		isBreak = true
+		return
 	} else if err, ok := sval.Interface().(error); ok {
 		if err != nil {
 			a.Error("Error:", err)
@@ -686,8 +700,7 @@ func (a *App) run(req *http.Request, w http.ResponseWriter, route Route, args []
 		isBreak = true
 		return
 	} else {
-		a.Warnf("unkonw returned result type %v, ignored %v", sval,
-			sval.Interface().(error))
+		a.Warnf("unknown returned result type %v, ignored %v", sval.Kind(), sval.Interface())
 		isBreak = true
 		return
 	}
@@ -703,6 +716,12 @@ func (a *App) run(req *http.Request, w http.ResponseWriter, route Route, args []
 	responseSize = int64(size)
 	return
 }
+
+type (
+	JSON interface{}
+	XML  interface{}
+	FILE string
+)
 
 func (a *App) error(w http.ResponseWriter, status int, content string) error {
 	w.WriteHeader(status)
