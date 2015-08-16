@@ -623,7 +623,7 @@ func (a *App) run(req *http.Request, w http.ResponseWriter, route Route, args []
 	initM = vc.MethodByName("Before")
 	if initM.IsValid() {
 		structAction := []reflect.Value{structName, actionName}
-		if ok := initM.Call(structAction); !ok[0].Bool() {
+		if ok := initM.Call(structAction); ok[0].Kind() == reflect.Bool && !ok[0].Bool() {
 			isBreak = true
 			responseSize = c.ResponseSize
 			return
@@ -657,11 +657,7 @@ func (a *App) run(req *http.Request, w http.ResponseWriter, route Route, args []
 			isBreak = true
 			return
 		}
-		if ok := initM.Call(structAction); !ok[0].Bool() {
-			isBreak = true
-			responseSize = c.ResponseSize
-			return
-		}
+		ret = initM.Call(structAction)
 	}
 
 	if len(ret) == 0 {
