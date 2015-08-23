@@ -26,9 +26,10 @@ var (
 )
 
 type (
-	JSON interface{}
-	XML  interface{}
-	FILE string
+	JSON  interface{}
+	JSONP interface{}
+	XML   interface{}
+	FILE  string
 )
 
 const (
@@ -679,6 +680,11 @@ func (a *App) run(req *http.Request, w http.ResponseWriter, route Route, args []
 		content = sval.Interface().([]byte)
 	} else if obj, ok := sval.Interface().(JSON); ok {
 		c.ServeJson(obj)
+		responseSize = c.ResponseSize
+		isBreak = true
+		return
+	} else if obj, ok := sval.Interface().(JSONP); ok {
+		c.ServeJsonp(obj, "")
 		responseSize = c.ResponseSize
 		isBreak = true
 		return

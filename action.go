@@ -48,14 +48,15 @@ type Action struct {
 	App     *App
 	Option  *ActionOption
 	http.ResponseWriter
-	C            reflect.Value
-	session      *httpsession.Session
-	T            T
-	f            T
-	RootTemplate *template.Template
-	RequestBody  []byte
-	StatusCode   int
-	ResponseSize int64
+	C             reflect.Value
+	session       *httpsession.Session
+	T             T
+	f             T
+	RootTemplate  *template.Template
+	RequestBody   []byte
+	StatusCode    int
+	ResponseSize  int64
+	JsonpCallback string
 }
 
 // Protocol returns request protocol name, such as HTTP/1.1 .
@@ -740,6 +741,29 @@ func (c *Action) ServeJson(obj interface{}) {
 	if err != nil {
 		http.Error(c.ResponseWriter, err.Error(), http.StatusInternalServerError)
 		return
+	}
+	c.SetHeader("Content-Length", strconv.Itoa(len(content)))
+	c.ResponseWriter.Header().Set("Content-Type", "application/json")
+	size, _ := c.ResponseWriter.Write(content)
+	c.ResponseSize += int64(size)
+}
+
+func (c *Action) ServeJsonp(obj interface{}, callback string) {
+	content, err := json.MarshalIndent(obj, "", "  ")
+	if err != nil {
+		http.Error(c.ResponseWriter, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if callback == "" {
+		if c.JsonpCallback == "" {
+			callback = c.GetString("callback")
+		} else {
+			callback = c.JsonpCallback
+		}
+	}
+	if callback != "" {
+		temp := callback + "(" + string(content) + ");"
+		content = []byte(temp)
 	}
 	c.SetHeader("Content-Length", strconv.Itoa(len(content)))
 	c.ResponseWriter.Header().Set("Content-Type", "application/json")
