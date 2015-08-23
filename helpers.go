@@ -14,6 +14,7 @@ import (
 	"path"
 	"reflect"
 	"regexp"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -83,6 +84,13 @@ func dirExists(dir string) bool {
 	}
 
 	return true
+}
+
+func FixDirSeparator(dir string) string {
+	if runtime.GOOS == "windows" {
+		return strings.Replace(dir, "\\", "/", -1)
+	}
+	return dir
 }
 
 func fileExists(dir string) bool {

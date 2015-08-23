@@ -6,7 +6,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 
 	"github.com/howeyc/fsnotify"
@@ -152,7 +151,7 @@ func (self *StaticVerMgr) CacheAll(staticPath string) error {
 			return nil
 		}
 		rp := f[len(staticPath)+1:]
-		rp = strings.Replace(rp, "\\", "/", -1)
+		rp = FixDirSeparator(rp)
 		if _, ok := self.Ignores[filepath.Base(rp)]; !ok {
 			self.Caches[rp] = self.getFileVer(rp)
 		}
@@ -177,7 +176,7 @@ func (self *StaticVerMgr) GetVersion(url string) string {
 }
 
 func (self *StaticVerMgr) CacheDelete(url string) {
-	url = strings.Replace(url, "\\", "/", -1)
+	url = FixDirSeparator(url)
 	self.mutex.Lock()
 	defer self.mutex.Unlock()
 	if _, ok := self.Caches[url]; ok {
@@ -187,7 +186,7 @@ func (self *StaticVerMgr) CacheDelete(url string) {
 }
 
 func (self *StaticVerMgr) CacheItem(url string) {
-	url = strings.Replace(url, "\\", "/", -1)
+	url = FixDirSeparator(url)
 	ver := self.getFileVer(url)
 	if ver != "" {
 		self.mutex.Lock()
@@ -198,7 +197,7 @@ func (self *StaticVerMgr) CacheItem(url string) {
 }
 
 func (self *StaticVerMgr) DeleteCombined(url string) {
-	url = "/" + strings.Replace(url, "\\", "/", -1)
+	url = "/" + FixDirSeparator(url)
 	self.mutex.Lock()
 	defer self.mutex.Unlock()
 	if val, ok := self.Combined[url]; ok {

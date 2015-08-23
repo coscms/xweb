@@ -419,7 +419,7 @@ func (self *TemplateMgr) CacheAll(rootDir string) error {
 			return nil
 		}
 		tmpl := f[len(rootDir)+1:]
-		tmpl = strings.Replace(tmpl, "\\", "/", -1) //[SWH|+]fix windows env
+		tmpl = FixDirSeparator(tmpl)
 		if _, ok := self.Ignores[filepath.Base(tmpl)]; !ok {
 			fpath := filepath.Join(self.RootDir, tmpl)
 			content, err := ioutil.ReadFile(fpath)
@@ -478,7 +478,7 @@ func (self *TemplateMgr) CacheTemplate(tmpl string, content []byte) {
 	}
 	self.mutex.Lock()
 	defer self.mutex.Unlock()
-	tmpl = strings.Replace(tmpl, "\\", "/", -1)
+	tmpl = FixDirSeparator(tmpl)
 	self.app.Debugf("update template %v on cache", tmpl)
 	self.Caches[tmpl] = content
 	return
@@ -487,7 +487,7 @@ func (self *TemplateMgr) CacheTemplate(tmpl string, content []byte) {
 func (self *TemplateMgr) CacheDelete(tmpl string) {
 	self.mutex.Lock()
 	defer self.mutex.Unlock()
-	tmpl = strings.Replace(tmpl, "\\", "/", -1)
+	tmpl = FixDirSeparator(tmpl)
 	if _, ok := self.Caches[tmpl]; ok {
 		self.app.Debugf("delete template %v from cache", tmpl)
 		delete(self.Caches, tmpl)
