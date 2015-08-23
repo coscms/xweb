@@ -760,10 +760,11 @@ func (c *Action) ServeJsonp(obj interface{}, callback string) {
 		} else {
 			callback = c.JsonpCallback
 		}
-	}
-	if callback != "" {
-		temp := callback + "(" + string(content) + ");"
-		content = []byte(temp)
+		if callback != "" {
+			content = []byte(callback + "(" + string(content) + ");")
+		}
+	} else {
+		content = []byte(callback + "(" + string(content) + ");")
 	}
 	c.SetHeader("Content-Length", strconv.Itoa(len(content)))
 	c.ResponseWriter.Header().Set("Content-Type", "application/json")

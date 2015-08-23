@@ -25,12 +25,22 @@ var (
 	mapperType = reflect.TypeOf(Mapper{})
 )
 
-type (
-	JSON  interface{}
-	JSONP interface{}
-	XML   interface{}
-	FILE  string
-)
+type JSON struct {
+	Data interface{}
+}
+
+type JSONP struct {
+	Data     interface{}
+	Callback string
+}
+
+type XML struct {
+	Data interface{}
+}
+
+type FILE struct {
+	Data string
+}
 
 const (
 	Debug = iota + 1
@@ -679,22 +689,22 @@ func (a *App) run(req *http.Request, w http.ResponseWriter, route Route, args []
 	} else if sval.Kind() == reflect.Slice && sval.Type().Elem().Kind() == reflect.Uint8 {
 		content = sval.Interface().([]byte)
 	} else if obj, ok := sval.Interface().(JSON); ok {
-		c.ServeJson(obj)
+		c.ServeJson(obj.Data)
 		responseSize = c.ResponseSize
 		isBreak = true
 		return
 	} else if obj, ok := sval.Interface().(JSONP); ok {
-		c.ServeJsonp(obj, "")
+		c.ServeJsonp(obj.Data, obj.Callback)
 		responseSize = c.ResponseSize
 		isBreak = true
 		return
 	} else if obj, ok := sval.Interface().(XML); ok {
-		c.ServeXml(obj)
+		c.ServeXml(obj.Data)
 		responseSize = c.ResponseSize
 		isBreak = true
 		return
 	} else if file, ok := sval.Interface().(FILE); ok {
-		c.ServeFile(string(file))
+		c.ServeFile(file.Data)
 		isBreak = true
 		return
 	} else if err, ok := sval.Interface().(error); ok {
