@@ -743,7 +743,7 @@ func (c *Action) ServeJson(obj interface{}) {
 		return
 	}
 	c.SetHeader("Content-Length", strconv.Itoa(len(content)))
-	c.ResponseWriter.Header().Set("Content-Type", "application/json")
+	c.ResponseWriter.Header().Set("Content-Type", "application/json; charset=utf-8")
 	size, _ := c.ResponseWriter.Write(content)
 	c.ResponseSize += int64(size)
 }
@@ -767,7 +767,7 @@ func (c *Action) ServeJsonp(obj interface{}, callback string) {
 		content = []byte(callback + "(" + string(content) + ");")
 	}
 	c.SetHeader("Content-Length", strconv.Itoa(len(content)))
-	c.ResponseWriter.Header().Set("Content-Type", "application/json")
+	c.ResponseWriter.Header().Set("Content-Type", "application/json; charset=utf-8")
 	size, _ := c.ResponseWriter.Write(content)
 	c.ResponseSize += int64(size)
 }
@@ -779,7 +779,7 @@ func (c *Action) ServeXml(obj interface{}) {
 		return
 	}
 	c.SetHeader("Content-Length", strconv.Itoa(len(content)))
-	c.ResponseWriter.Header().Set("Content-Type", "application/xml")
+	c.ResponseWriter.Header().Set("Content-Type", "application/xml; charset=utf-8")
 	size, _ := c.ResponseWriter.Write(content)
 	c.ResponseSize += int64(size)
 }
