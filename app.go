@@ -71,7 +71,6 @@ type App struct {
 	StaticVerMgr       *StaticVerMgr
 	TemplateMgr        *TemplateMgr
 	ContentEncoding    string
-	requestTime        time.Time
 	Cryptor
 	XsrfManager
 }
@@ -138,8 +137,12 @@ func NewApp(path string, name string) *App {
 	}
 }
 
+func (a *App) IsRootApp() bool {
+	return a.BasePath == "/"
+}
+
 func (a *App) initApp() {
-	var isRootApp bool = a.BasePath == "/"
+	var isRootApp bool = a.IsRootApp()
 	if a.AppConfig.StaticFileVersion {
 		if isRootApp || a.Server.RootApp.AppConfig.StaticDir != a.AppConfig.StaticDir {
 			if !isRootApp {
@@ -445,7 +448,18 @@ func (a *App) ElapsedTimeString() string {
 }
 
 func (a *App) ElapsedTime() float64 {
-	return time.Now().Sub(a.requestTime).Seconds()
+	return time.Now().Sub(a.Server.RequestTime).Seconds()
+}
+
+func (a *App) VisitedLog(req *http.Request, statusCode int, requestPath string, responseSize int64) {
+	if statusCode == 0 {
+		statusCode = 200
+	}
+	if statusCode >= 200 && statusCode < 400 {
+		a.Info(req.RemoteAddr, req.Method, statusCode, requestPath, responseSize, a.ElapsedTimeString())
+	} else {
+		a.Error(req.RemoteAddr, req.Method, statusCode, requestPath, responseSize, a.ElapsedTimeString())
+	}
 }
 
 // the main route handler in web.go
@@ -455,17 +469,26 @@ func (a *App) routeHandler(req *http.Request, w http.ResponseWriter) {
 		statusCode   int    = 0
 		responseSize int64  = 0
 	)
-	a.requestTime = time.Now()
 	defer func() {
-		if statusCode == 0 {
-			statusCode = 200
-		}
-		if statusCode >= 200 && statusCode < 400 {
-			a.Info(req.RemoteAddr, req.Method, statusCode, requestPath, responseSize, a.ElapsedTimeString())
-		} else {
-			a.Error(req.RemoteAddr, req.Method, statusCode, requestPath, responseSize, a.ElapsedTimeString())
-		}
+		a.VisitedLog(req, statusCode, requestPath, responseSize)
 	}()
+
+	if !a.IsRootApp() || a.Server.Config.UrlSuffix != "" || a.Server.Config.UrlPrefix != "" {
+		// static files, needed op
+		if req.Method == "GET" || req.Method == "HEAD" {
+			success, size := a.TryServingFile(requestPath, req, w)
+			if success {
+				statusCode = 200
+				responseSize = size
+				return
+			}
+			if requestPath == "/favicon.ico" {
+				statusCode = 404
+				a.error(w, 404, "Page not found")
+				return
+			}
+		}
+	}
 
 	//ignore errors from ParseForm because it's usually harmless.
 	ct := req.Header.Get("Content-Type")
@@ -473,26 +496,6 @@ func (a *App) routeHandler(req *http.Request, w http.ResponseWriter) {
 		req.ParseMultipartForm(a.AppConfig.MaxUploadSize)
 	} else {
 		req.ParseForm()
-	}
-
-	//set some default headers
-	w.Header().Set("Server", "xweb")
-	tm := a.requestTime.UTC()
-	w.Header().Set("Date", webTime(tm))
-
-	// static files, needed op
-	if req.Method == "GET" || req.Method == "HEAD" {
-		success, size := a.TryServingFile(requestPath, req, w)
-		if success {
-			statusCode = 200
-			responseSize = size
-			return
-		}
-		if requestPath == "/favicon.ico" {
-			statusCode = 404
-			a.error(w, 404, "Page not found")
-			return
-		}
 	}
 
 	//Set the default content-type

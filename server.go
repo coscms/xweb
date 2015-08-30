@@ -43,6 +43,7 @@ type Server struct {
 	RootApp        *App
 	Logger         *log.Logger
 	Env            map[string]interface{}
+	RequestTime    time.Time
 
 	http.ResponseWriter
 	*http.Request
@@ -146,12 +147,33 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 // Process invokes the routing system for server s
 // non-root app's route will override root app's if there is same path
 func (s *Server) Process() {
+	s.RequestTime = time.Now()
+
+	w := s.ResponseWriter
+	req := s.Request
+
+	//set some default headers
+	w.Header().Set("Server", "xweb v"+Version)
+	w.Header().Set("Date", webTime(s.RequestTime.UTC()))
+
 	Event("ServerProcess", s, func(result bool) {
 		if !result {
 			return
 		}
-		w := s.ResponseWriter
-		req := s.Request
+		// static files, needed op
+		if req.Method == "GET" || req.Method == "HEAD" {
+			success, size := s.RootApp.TryServingFile(req.URL.Path, req, w)
+			if success {
+				s.RootApp.VisitedLog(req, 200, req.URL.Path, size)
+				return
+			}
+			if req.URL.Path == "/favicon.ico" {
+				s.RootApp.error(w, 404, "Page not found")
+				s.RootApp.VisitedLog(req, 404, req.URL.Path, size)
+				return
+			}
+		}
+
 		if s.Config.UrlSuffix != "" && strings.HasSuffix(req.URL.Path, s.Config.UrlSuffix) {
 			req.URL.Path = strings.TrimSuffix(req.URL.Path, s.Config.UrlSuffix)
 		}
