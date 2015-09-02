@@ -71,6 +71,7 @@ type App struct {
 	StaticVerMgr       *StaticVerMgr
 	TemplateMgr        *TemplateMgr
 	ContentEncoding    string
+	RequestTime        time.Time
 	Cryptor
 	XsrfManager
 }
@@ -448,7 +449,7 @@ func (a *App) ElapsedTimeString() string {
 }
 
 func (a *App) ElapsedTime() float64 {
-	return time.Now().Sub(a.Server.RequestTime).Seconds()
+	return time.Now().Sub(a.RequestTime).Seconds()
 }
 
 func (a *App) VisitedLog(req *http.Request, statusCode int, requestPath string, responseSize int64) {

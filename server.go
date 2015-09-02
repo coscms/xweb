@@ -43,10 +43,7 @@ type Server struct {
 	RootApp        *App
 	Logger         *log.Logger
 	Env            map[string]interface{}
-	RequestTime    time.Time
 
-	http.ResponseWriter
-	*http.Request
 	//save the listener so it can be closed
 	l net.Listener
 }
@@ -139,24 +136,25 @@ func (s *Server) initServer() {
 
 // ServeHTTP is the interface method for Go's http server package
 func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	s.ResponseWriter = w
-	s.Request = req
-	s.Process()
+	s.Process(w, req)
+}
+
+type ServerInformation struct {
+	*Server
+	http.ResponseWriter
+	*http.Request
 }
 
 // Process invokes the routing system for server s
 // non-root app's route will override root app's if there is same path
-func (s *Server) Process() {
-	s.RequestTime = time.Now()
-
-	w := s.ResponseWriter
-	req := s.Request
+func (s *Server) Process(w http.ResponseWriter, req *http.Request) {
+	s.RootApp.RequestTime = time.Now()
 
 	//set some default headers
 	w.Header().Set("Server", "xweb v"+Version)
-	w.Header().Set("Date", webTime(s.RequestTime.UTC()))
+	w.Header().Set("Date", webTime(s.RootApp.RequestTime.UTC()))
 
-	Event("ServerProcess", s, func(result bool) {
+	Event("ServerProcess", &ServerInformation{s, w, req}, func(result bool) {
 		if !result {
 			return
 		}
@@ -207,6 +205,7 @@ func (s *Server) Process() {
 		}
 		for _, app := range s.Apps {
 			if app != s.RootApp && strings.HasPrefix(req.URL.Path, app.BasePath) {
+				app.RequestTime = s.RootApp.RequestTime
 				app.routeHandler(req, w)
 				return
 			}

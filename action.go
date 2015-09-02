@@ -587,6 +587,12 @@ func (c *Action) Panicf(format string, params ...interface{}) {
 	c.App.Panicf(format, params...)
 }
 
+type ActionInformation struct {
+	*Action
+	ContentString *string
+	ContentByte   *[]byte
+}
+
 // Include method provide to template for {{include "xx.tmpl"}}
 func (c *Action) Include(tmplName string) interface{} {
 	t := c.RootTemplate.New(tmplName)
@@ -600,7 +606,7 @@ func (c *Action) Include(tmplName string) interface{} {
 
 	constr := string(content)
 
-	Event("BeforeRender", []interface{}{c, &constr}, func(_ bool) {})
+	Event("BeforeRender", &ActionInformation{c, &constr, nil}, func(_ bool) {})
 
 	tmpl, err := t.Parse(constr)
 	if err != nil {
@@ -642,7 +648,7 @@ func (c *Action) NamedRender(name, content string, params ...*T) error {
 	c.RootTemplate = template.New(name)
 	c.RootTemplate.Funcs(c.GetFuncs())
 
-	Event("BeforeRender", []interface{}{c, &content}, func(_ bool) {})
+	Event("BeforeRender", &ActionInformation{c, &content, nil}, func(_ bool) {})
 
 	tmpl, err := c.RootTemplate.Parse(content)
 	if err == nil {
@@ -651,7 +657,7 @@ func (c *Action) NamedRender(name, content string, params ...*T) error {
 		if err == nil {
 			tplcontent, err := ioutil.ReadAll(newbytes)
 			if err == nil {
-				Event("AfterRender", []interface{}{c, &tplcontent}, func(result bool) {
+				Event("AfterRender", &ActionInformation{c, nil, &tplcontent}, func(result bool) {
 					if result {
 						err = c.SetBody(tplcontent)
 					}

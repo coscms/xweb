@@ -49,9 +49,7 @@ func Error(w http.ResponseWriter, status int, content string) error {
 
 // Process invokes the main server's routing system.
 func Process(w http.ResponseWriter, req *http.Request) {
-	mainServer.ResponseWriter = w
-	mainServer.Request = req
-	mainServer.Process()
+	mainServer.Process(w, req)
 }
 
 // Run starts the web application and serves HTTP requests for the main server.
