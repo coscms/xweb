@@ -636,7 +636,7 @@ func (c *Action) NamedRender(name, content string, params ...*T) error {
 	c.f["XsrfFormHtml"] = c.XsrfFormHtml
 	c.f["XsrfValue"] = c.XsrfValue
 	if len(params) > 0 {
-		c.AddTmplVars(params[0])
+		c.MultiAssign(params[0])
 	}
 
 	c.RootTemplate = template.New(name)
@@ -716,7 +716,7 @@ func (c *Action) SetHeader(key string, value string) {
 }
 
 // add a name value for template
-func (c *Action) AddTmplVar(name string, varOrFunc interface{}) {
+func (c *Action) Assign(name string, varOrFunc interface{}) {
 	if varOrFunc == nil {
 		c.T[name] = varOrFunc
 		return
@@ -730,9 +730,9 @@ func (c *Action) AddTmplVar(name string, varOrFunc interface{}) {
 }
 
 // add names and values for template
-func (c *Action) AddTmplVars(t *T) {
+func (c *Action) MultiAssign(t *T) {
 	for name, value := range *t {
-		c.AddTmplVar(name, value)
+		c.Assign(name, value)
 	}
 }
 

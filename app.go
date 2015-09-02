@@ -248,7 +248,7 @@ func (app *App) AutoAction(cs ...interface{}) {
 	}
 }
 
-func (app *App) AddTmplVar(name string, varOrFun interface{}) {
+func (app *App) Assign(name string, varOrFun interface{}) {
 	if reflect.TypeOf(varOrFun).Kind() == reflect.Func {
 		app.FuncMaps[name] = varOrFun
 	} else {
@@ -256,9 +256,9 @@ func (app *App) AddTmplVar(name string, varOrFun interface{}) {
 	}
 }
 
-func (app *App) AddTmplVars(t *T) {
+func (app *App) MultiAssign(t *T) {
 	for name, value := range *t {
-		app.AddTmplVar(name, value)
+		app.Assign(name, value)
 	}
 }
 

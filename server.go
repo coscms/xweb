@@ -98,12 +98,12 @@ func (s *Server) AddRouter(url string, c interface{}) {
 	s.RootApp.AddRouter(url, c)
 }
 
-func (s *Server) AddTmplVar(name string, varOrFun interface{}) {
-	s.RootApp.AddTmplVar(name, varOrFun)
+func (s *Server) Assign(name string, varOrFun interface{}) {
+	s.RootApp.Assign(name, varOrFun)
 }
 
-func (s *Server) AddTmplVars(t *T) {
-	s.RootApp.AddTmplVars(t)
+func (s *Server) MultiAssign(t *T) {
+	s.RootApp.MultiAssign(t)
 }
 
 func (s *Server) AddFilter(filter Filter) {

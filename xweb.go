@@ -102,12 +102,12 @@ func AddAction(c ...interface{}) {
 	mainServer.AddAction(c...)
 }
 
-func AddTmplVar(name string, varOrFun interface{}) {
-	mainServer.AddTmplVar(name, varOrFun)
+func Assign(name string, varOrFun interface{}) {
+	mainServer.Assign(name, varOrFun)
 }
 
-func AddTmplVars(t *T) {
-	mainServer.AddTmplVars(t)
+func MultiAssign(t *T) {
+	mainServer.MultiAssign(t)
 }
 
 func AddRouter(url string, c interface{}) {

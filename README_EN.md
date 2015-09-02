@@ -8,7 +8,7 @@ xweb is a web framework for Go which is based on web.go. It just like Struts for
 
 ## Changelog
 
-* **v0.1.1** : App added method AutoAction；Action added method AddTmplVar；Action's method Render's T param now supports variable, function or method。
+* **v0.1.1** : App added method AutoAction；Action added method Assign；Action's method Render's T param now supports variable, function or method。
 * **v0.1.0** : Inital release.
 
 ## Features

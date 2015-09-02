@@ -178,9 +178,9 @@ func (c *MainAction) Parse() error {
 
     1）Go模板自带的模板函数
     2）xweb内置的模板函数和变量
-    3）通过Server.AddTmplVar或者AddTmplVars添加的函数或者变量
-    4）通过App.AddTmplVar或者AddTmplVars添加的函数或者变量
-    5）通过Action.AddTmplVar或者AddTmplVars添加的函数或者变量
+    3）通过Server.Assign或者MultiAssign添加的函数或者变量
+    4）通过App.Assign或者MultiAssign添加的函数或者变量
+    5）通过Action.Assign或者MultiAssign添加的函数或者变量
     6）Action的公共变量和公共方法
 
 ## Go模板自带模板函数
@@ -237,17 +237,17 @@ xweb内置的模板函数和Go模板函数一样，在模板中使用{{funcName 
 获取cookie的指
 
 
-## 通过xweb.AddTmplVar或者AddTmplVars添加的函数或者变量
+## 通过xweb.Assign或者MultiAssign添加的函数或者变量
 
-通过xweb.AddTmplVar或者AddTmplVars添加的函数或者变量在MainServer的RootApp范围内有效，在模板中使用{{funcName ...}}形式调用函数。变量使用{{.T.}}方式调用。
+通过xweb.Assign或者MultiAssign添加的函数或者变量在MainServer的RootApp范围内有效，在模板中使用{{funcName ...}}形式调用函数。变量使用{{.T.}}方式调用。
 
-## 通过App.AddTmplVar或者AddTmplVars添加的函数或者变量
+## 通过App.Assign或者MultiAssign添加的函数或者变量
 
-通过App.AddTmplVar或者AddTmplVars添加的函数或者变量在此App范围内有效，在模板中使用{{funcName ...}}形式调用函数。变量使用{{.T.}}方式调用。
+通过App.Assign或者MultiAssign添加的函数或者变量在此App范围内有效，在模板中使用{{funcName ...}}形式调用函数。变量使用{{.T.}}方式调用。
 
-## 通过Action.AddTmplVar或者AddTmplVars添加的函数或者变量
+## 通过Action.Assign或者MultiAssign添加的函数或者变量
 
-通过Action.AddTmplVar或者AddTmplVars添加的函数或者变量在此Action范围内有效，在模板中使用{{funcName ...}}形式调用函数。变量使用{{.T.}}方式调用。
+通过Action.Assign或者MultiAssign添加的函数或者变量在此Action范围内有效，在模板中使用{{funcName ...}}形式调用函数。变量使用{{.T.}}方式调用。
 
 ## Action的公共变量和公共方法
 

@@ -22,7 +22,7 @@ func (c *MainAction) IsWorld() bool {
 
 func (c *MainAction) Init() {
 	fmt.Println("init mainaction")
-	c.AddTmplVar("isWorld", c.IsWorld)
+	c.Assign("isWorld", c.IsWorld)
 }
 
 func main() {
