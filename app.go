@@ -682,36 +682,41 @@ func (a *App) run(req *http.Request, w http.ResponseWriter, route Route, args []
 	}
 
 	sval := ret[0]
-
+	intf := sval.Interface()
+	kind := sval.Kind()
 	var content []byte
-	if sval.Interface() == nil || sval.Kind() == reflect.Bool {
+	if intf == nil || kind == reflect.Bool {
 		isBreak = true
 		responseSize = c.ResponseSize
 		return
-	} else if sval.Kind() == reflect.String {
+	} else if kind == reflect.String {
 		content = []byte(sval.String())
-	} else if sval.Kind() == reflect.Slice && sval.Type().Elem().Kind() == reflect.Uint8 {
-		content = sval.Interface().([]byte)
-	} else if obj, ok := sval.Interface().(JSON); ok {
+	} else if kind == reflect.Slice && sval.Type().Elem().Kind() == reflect.Uint8 {
+		content = intf.([]byte)
+	} else if _, ok := intf.(bool); ok {
+		responseSize = c.ResponseSize
+		isBreak = true
+		return
+	} else if obj, ok := intf.(JSON); ok {
 		c.ServeJson(obj.Data)
 		responseSize = c.ResponseSize
 		isBreak = true
 		return
-	} else if obj, ok := sval.Interface().(JSONP); ok {
+	} else if obj, ok := intf.(JSONP); ok {
 		c.ServeJsonp(obj.Data, obj.Callback)
 		responseSize = c.ResponseSize
 		isBreak = true
 		return
-	} else if obj, ok := sval.Interface().(XML); ok {
+	} else if obj, ok := intf.(XML); ok {
 		c.ServeXml(obj.Data)
 		responseSize = c.ResponseSize
 		isBreak = true
 		return
-	} else if file, ok := sval.Interface().(FILE); ok {
+	} else if file, ok := intf.(FILE); ok {
 		c.ServeFile(file.Data)
 		isBreak = true
 		return
-	} else if err, ok := sval.Interface().(error); ok {
+	} else if err, ok := intf.(error); ok {
 		if err != nil {
 			a.Error("Error:", err)
 			a.error(w, 500, "Server Error")
@@ -722,7 +727,7 @@ func (a *App) run(req *http.Request, w http.ResponseWriter, route Route, args []
 		isBreak = true
 		return
 	} else {
-		a.Warnf("unknown returned result type %v, ignored %v", sval.Kind(), sval.Interface())
+		a.Warnf("unknown returned result type %v, ignored %v", kind, intf)
 		isBreak = true
 		return
 	}

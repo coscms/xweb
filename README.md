@@ -11,6 +11,7 @@ xweb是一个强大的Go语言web框架。
 QQ群：369240307
 
 ## 更新日志
+* **v0.4.0** : AddTmplVar改为Assign；AddTmplVars改为MultiAssign；日志中增加IP、页面大小(单位：字节)以及耗时记录；修复bug
 * **v0.3.0** : 增加对称加密、XSRF通用接口，更换hook引擎为更加优雅的events引擎
 * **v0.2.1** : 自动Binding新增对jquery对象，map和array的支持。
 * **v0.2** : 新增 validation 子包，从 [https://github.com/astaxie/beego/tree/master/validation](http://https://github.com/astaxie/beego/tree/master/validation) 拷贝过来。
