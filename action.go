@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/coscms/xweb/httpsession"
+	"github.com/coscms/xweb/lib/str"
 	"github.com/coscms/xweb/log"
 	"github.com/coscms/xweb/uuid"
 )
@@ -446,7 +447,7 @@ func (c *Action) SetSecureCookie(name string, val string, args ...interface{}) {
 		c.App.Error("Secret Key for secure cookies has not been set. Please assign a cookie secret to web.Config.CookieSecret.")
 		return
 	}
-	vs := Base64Encode(val)
+	vs := str.Base64Encode(val)
 	vb := []byte(vs)
 	key := c.App.AppConfig.CookieSecret
 	if c.App.AppConfig.CookieLimitIP {
@@ -456,7 +457,7 @@ func (c *Action) SetSecureCookie(name string, val string, args ...interface{}) {
 		key += "|" + c.UserAgent()
 	}
 	timestamp := strconv.FormatInt(time.Now().Unix(), 10)
-	sig := getCookieSig(key, vb, timestamp)
+	sig := str.Token(key, vb, timestamp)
 	cookie := strings.Join([]string{vs, timestamp, sig}, "|")
 	c.SetCookie(c.NewCookie(name, cookie, args...))
 }
@@ -481,7 +482,7 @@ func (c *Action) GetSecureCookie(name string) (string, bool) {
 		timestamp := parts[1]
 		sig := parts[2]
 
-		if getCookieSig(key, []byte(val), timestamp) != sig {
+		if str.Token(key, []byte(val), timestamp) != sig {
 			c.SetCookie(NewCookie(name, "", -86400))
 			return "", false
 		}
@@ -493,7 +494,7 @@ func (c *Action) GetSecureCookie(name string) (string, bool) {
 			return "", false
 		}
 
-		return Base64Decode(val), true
+		return str.Base64Decode(val), true
 	}
 	return "", false
 }

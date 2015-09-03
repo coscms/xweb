@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
+	"github.com/coscms/xweb/lib/str"
 	"log"
 )
 
@@ -60,11 +61,11 @@ func (c *AesCrypto) Encode(rawData, authKey string) string {
 	blockMode := cipher.NewCBCEncrypter(block, key[:blockSize])
 	crypted := make([]byte, len(in))
 	blockMode.CryptBlocks(crypted, in)
-	return Base64Encode(string(crypted))
+	return str.Base64Encode(string(crypted))
 }
 
 func (c *AesCrypto) Decode(cryptedData, authKey string) string {
-	cryptedData = Base64Decode(cryptedData)
+	cryptedData = str.Base64Decode(cryptedData)
 	if cryptedData == "" {
 		return ""
 	}

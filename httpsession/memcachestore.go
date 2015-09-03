@@ -5,7 +5,7 @@ import (
 	"log"
 	"time"
 
-	CS "coscms/app/base/lib/cachestore"
+	"github.com/coscms/xweb/lib/str"
 	"github.com/bradfitz/gomemcache/memcache"
 )
 
@@ -66,7 +66,7 @@ func (store *MemcacheStore) get(id Id) *sessionNode {
 	}
 
 	var v interface{}
-	err = CS.Decode(val.Value, &v)
+	err = str.Decode(val.Value, &v)
 	if err != nil {
 		if store.Debug {
 			log.Println("[Memcache]DecodeErr: ", err, "Key:", key)
@@ -77,7 +77,7 @@ func (store *MemcacheStore) get(id Id) *sessionNode {
 }
 func (store *MemcacheStore) set(id Id, v *sessionNode) bool {
 	key := string(id)
-	val, err := CS.Encode(v)
+	val, err := str.Encode(v)
 	if err != nil {
 		if store.Debug {
 			log.Println("[Memcache]EncodeErr: ", err, "Key:", key)
@@ -109,7 +109,7 @@ func (store *MemcacheStore) Del(id Id, key string) bool {
 
 func (store *MemcacheStore) Exist(id Id) bool {
 	key := string(id)
-	mk := CS.Md5(key)
+	mk := str.Md5(key)
 	val, err := store.c.Get(mk)
 	if err != nil || val == nil {
 		return false
@@ -119,7 +119,7 @@ func (store *MemcacheStore) Exist(id Id) bool {
 
 func (store *MemcacheStore) Clear(id Id) bool {
 	key := string(id)
-	err := store.c.Delete(CS.Md5(key))
+	err := store.c.Delete(str.Md5(key))
 	if err != nil {
 		if store.Debug {
 			log.Println("[Memcache]DelErr: ", err, "Key:", key)
