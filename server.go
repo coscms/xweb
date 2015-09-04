@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"golang.org/x/net/netutil"
 	"github.com/coscms/xweb/httpsession"
 	"github.com/coscms/xweb/log"
 )
@@ -29,6 +30,7 @@ type ServerConfig struct {
 	UrlSuffix              string
 	StaticHtmlDir          string
 	SessionTimeout         time.Duration
+	MaxConnections         int
 }
 
 // Server represents a xweb server.
@@ -261,6 +263,9 @@ func (s *Server) Run(addr string) {
 	l, err := net.Listen("tcp", addr)
 	if err != nil {
 		s.Logger.Error("ListenAndServe:", err)
+	}
+	if s.Config.MaxConnections > 0 {
+		l = netutil.LimitListener(l, s.Config.MaxConnections)
 	}
 	s.l = l
 	err = http.Serve(s.l, mux)
