@@ -601,8 +601,9 @@ func (c *Action) Include(tmplName string) interface{} {
 
 	content, err := c.getTemplate(tmplName)
 	if err != nil {
-		c.Errorf("RenderTemplate %v read err: %s", tmplName, err)
-		return ""
+		errMsg := fmt.Sprintf("RenderTemplate %v read err: %s", tmplName, err)
+		c.Error(errMsg)
+		return errMsg
 	}
 
 	constr := string(content)
@@ -611,20 +612,23 @@ func (c *Action) Include(tmplName string) interface{} {
 
 	tmpl, err := t.Parse(constr)
 	if err != nil {
-		c.Errorf("Parse %v err: %v", tmplName, err)
-		return ""
+		errMsg := fmt.Sprintf("Parse %v err: %v", tmplName, err)
+		c.Error(errMsg)
+		return errMsg
 	}
 	newbytes := bytes.NewBufferString("")
 	err = tmpl.Execute(newbytes, c.C.Elem().Interface())
 	if err != nil {
-		c.Errorf("Parse %v err: %v", tmplName, err)
-		return ""
+		errMsg := fmt.Sprintf("Parse %v err: %v", tmplName, err)
+		c.Error(errMsg)
+		return errMsg
 	}
 
 	tplcontent, err := ioutil.ReadAll(newbytes)
 	if err != nil {
-		c.Errorf("Parse %v err: %v", tmplName, err)
-		return ""
+		errMsg := fmt.Sprintf("Parse %v err: %v", tmplName, err)
+		c.Error(errMsg)
+		return errMsg
 	}
 	return template.HTML(string(tplcontent))
 }
@@ -652,20 +656,26 @@ func (c *Action) NamedRender(name, content string, params ...*T) error {
 	Event("BeforeRender", &ActionInformation{c, &content, nil}, func(_ bool) {})
 
 	tmpl, err := c.RootTemplate.Parse(content)
-	if err == nil {
-		newbytes := bytes.NewBufferString("")
-		err = tmpl.Execute(newbytes, c.C.Elem().Interface())
-		if err == nil {
-			tplcontent, err := ioutil.ReadAll(newbytes)
-			if err == nil {
-				Event("AfterRender", &ActionInformation{c, nil, &tplcontent}, func(result bool) {
-					if result {
-						err = c.SetBody(tplcontent)
-					}
-				})
-			}
-		}
+	if err != nil {
+		c.SetBody([]byte(fmt.Sprintf("%v", err)))
+		return err
 	}
+	newbytes := bytes.NewBufferString("")
+	err = tmpl.Execute(newbytes, c.C.Elem().Interface())
+	if err != nil {
+		c.SetBody([]byte(fmt.Sprintf("%v", err)))
+		return err
+	}
+	tplcontent, err := ioutil.ReadAll(newbytes)
+	if err != nil {
+		c.SetBody([]byte(fmt.Sprintf("%v", err)))
+		return err
+	}
+	Event("AfterRender", &ActionInformation{c, nil, &tplcontent}, func(result bool) {
+		if result {
+			err = c.SetBody(tplcontent)
+		}
+	})
 	return err
 }
 
