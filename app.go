@@ -572,7 +572,7 @@ func (a *App) routeHandler(req *http.Request, w http.ResponseWriter) {
 }
 
 func (a *App) run(req *http.Request, w http.ResponseWriter, route Route, args []reflect.Value) (isBreak bool, statusCode int, responseSize int64) {
-
+	isBreak = true
 	vc := reflect.New(route.HandlerElement)
 	c := &Action{
 		Request:        req,
@@ -627,7 +627,6 @@ func (a *App) run(req *http.Request, w http.ResponseWriter, route Route, args []
 				a.error(w, 500, "xsrf token error.")
 				a.Error("xsrf token error.")
 				statusCode = 500
-				isBreak = true
 				return
 			}
 		}
@@ -639,7 +638,6 @@ func (a *App) run(req *http.Request, w http.ResponseWriter, route Route, args []
 	if initM.IsValid() {
 		structAction := []reflect.Value{structName, actionName}
 		if ok := initM.Call(structAction); ok[0].Kind() == reflect.Bool && !ok[0].Bool() {
-			isBreak = true
 			responseSize = c.ResponseSize
 			return
 		}
@@ -654,7 +652,6 @@ func (a *App) run(req *http.Request, w http.ResponseWriter, route Route, args []
 			a.error(w, 500, "Server Error")
 		}
 		statusCode = 500
-		isBreak = true
 		responseSize = c.ResponseSize
 		return
 	}
@@ -669,14 +666,12 @@ func (a *App) run(req *http.Request, w http.ResponseWriter, route Route, args []
 		}
 		if len(structAction) != initM.Type().NumIn() {
 			a.Errorf("Error : %v.After(): The number of params is not adapted.", structName)
-			isBreak = true
 			return
 		}
 		ret = initM.Call(structAction)
 	}
 
 	if len(ret) == 0 {
-		isBreak = true
 		responseSize = c.ResponseSize
 		return
 	}
@@ -686,7 +681,6 @@ func (a *App) run(req *http.Request, w http.ResponseWriter, route Route, args []
 	kind := sval.Kind()
 	var content []byte
 	if intf == nil || kind == reflect.Bool {
-		isBreak = true
 		responseSize = c.ResponseSize
 		return
 	} else if kind == reflect.String {
@@ -695,26 +689,21 @@ func (a *App) run(req *http.Request, w http.ResponseWriter, route Route, args []
 		content = intf.([]byte)
 	} else if _, ok := intf.(bool); ok {
 		responseSize = c.ResponseSize
-		isBreak = true
 		return
 	} else if obj, ok := intf.(JSON); ok {
 		c.ServeJson(obj.Data)
 		responseSize = c.ResponseSize
-		isBreak = true
 		return
 	} else if obj, ok := intf.(JSONP); ok {
 		c.ServeJsonp(obj.Data, obj.Callback)
 		responseSize = c.ResponseSize
-		isBreak = true
 		return
 	} else if obj, ok := intf.(XML); ok {
 		c.ServeXml(obj.Data)
 		responseSize = c.ResponseSize
-		isBreak = true
 		return
 	} else if file, ok := intf.(FILE); ok {
 		c.ServeFile(file.Data)
-		isBreak = true
 		return
 	} else if err, ok := intf.(error); ok {
 		if err != nil {
@@ -724,11 +713,13 @@ func (a *App) run(req *http.Request, w http.ResponseWriter, route Route, args []
 		} else {
 			responseSize = c.ResponseSize
 		}
-		isBreak = true
 		return
+	} else if str, ok := intf.(string); ok {
+		content = []byte(str)
+	} else if byt, ok := intf.([]byte); ok {
+		content = byt
 	} else {
 		a.Warnf("unknown returned result type %v, ignored %v", kind, intf)
-		isBreak = true
 		return
 	}
 
@@ -737,7 +728,6 @@ func (a *App) run(req *http.Request, w http.ResponseWriter, route Route, args []
 	if err != nil {
 		a.Errorf("Error during write: %v", err)
 		statusCode = 500
-		isBreak = true
 		return
 	}
 	responseSize = int64(size)
