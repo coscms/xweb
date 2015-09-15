@@ -2,18 +2,18 @@ package str
 
 import (
 	"bytes"
-	"crypto/md5"
-	"encoding/gob"
-	"encoding/json"
 	"crypto/hmac"
+	"crypto/md5"
 	"crypto/sha1"
+	"encoding/base64"
+	"encoding/gob"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
-	"encoding/base64"
 	"strings"
 )
-
 
 // md5 hash string
 func Md5(str string) string {
@@ -22,11 +22,17 @@ func Md5(str string) string {
 	return fmt.Sprintf("%x", m.Sum(nil))
 }
 
+// md5 hash string
+func Md5byte(b []byte) string {
+	m := md5.New()
+	m.Write(b)
+	return hex.EncodeToString(m.Sum(nil))
+}
 
 func Token(key string, val []byte, args ...string) string {
 	hm := hmac.New(sha1.New, []byte(key))
 	hm.Write(val)
-	for _,v := range args {
+	for _, v := range args {
 		hm.Write([]byte(v))
 	}
 	return fmt.Sprintf("%02x", hm.Sum(nil))

@@ -5,7 +5,6 @@ import (
 	"compress/flate"
 	"compress/gzip"
 	"crypto/md5"
-	"encoding/hex"
 	"encoding/json"
 	"encoding/xml"
 	"errors"
@@ -237,9 +236,7 @@ func (c *Action) DisableHttpCache() {
 }
 
 func (c *Action) HttpCache(content []byte) bool {
-	h := md5.New()
-	h.Write(content)
-	Etag := hex.EncodeToString(h.Sum(nil))
+	Etag := str.Md5byte(content)
 	//c.SetHeader("Connection", "keep-alive")
 	c.SetHeader("X-Cache", "HIT from COSCMS-Page-Cache")
 	//c.SetHeader("X-Cache", "HIT from COSCMS-Page-Cache 2013-12-02 17:16:01")
