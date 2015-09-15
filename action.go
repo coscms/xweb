@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"compress/flate"
 	"compress/gzip"
-	"crypto/md5"
 	"encoding/json"
 	"encoding/xml"
 	"errors"
@@ -717,10 +716,7 @@ func (c *Action) GetConfig(name string) interface{} {
 }
 
 func (c *Action) RenderString(content string, params ...*T) error {
-	h := md5.New()
-	h.Write([]byte(content))
-	name := h.Sum(nil)
-	return c.NamedRender(string(name), content, params...)
+	return c.NamedRender(str.Md5(content), content, params...)
 }
 
 // SetHeader sets a response header. the current value
