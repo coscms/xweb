@@ -130,6 +130,7 @@ func NewApp(path string, name string) *App {
 			Int:       make(map[string]int64),
 			Float:     make(map[string]float64),
 			Byte:      make(map[string][]byte),
+			Conf:      make(map[string]*CONF),
 		},
 		Actions:            map[string]interface{}{},
 		ActionsPath:        map[reflect.Type]string{},

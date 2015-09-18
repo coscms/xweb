@@ -7,6 +7,35 @@ type CONF struct {
 	Int       map[string]int64
 	Float     map[string]float64
 	Byte      map[string][]byte
+	Conf      map[string]*CONF
+}
+
+func (a *CONF) GetConf(k string) *CONF {
+	if a.Conf == nil {
+		a.InitConf()
+	}
+	if v, ok := a.Conf[k]; ok {
+		return v
+	}
+	c := &CONF{}
+	c.Init()
+	return c
+}
+
+func (a *CONF) SetConf(k string, v *CONF) {
+	if a.Conf == nil {
+		a.InitConf()
+	}
+	a.Conf[k] = v
+}
+
+func (a *CONF) DelConf(k string) {
+	if a.Conf == nil {
+		a.InitConf()
+	}
+	if _, ok := a.Conf[k]; ok {
+		delete(a.Conf, k)
+	}
 }
 
 func (a *CONF) GetBool(k string) bool {
@@ -111,30 +140,35 @@ func (a *CONF) DelByte(k string) {
 	}
 }
 
-func (a *CONF) Clear() {
+func (a *CONF) Init() {
 	a.Bool = make(map[string]bool)
 	a.Interface = make(map[string]interface{})
 	a.String = make(map[string]string)
 	a.Int = make(map[string]int64)
 	a.Float = make(map[string]float64)
+	a.Byte = make(map[string][]byte)
+	a.Conf = make(map[string]*CONF)
+}
+
+func (a *CONF) InitBool() {
+	a.Bool = make(map[string]bool)
+}
+func (a *CONF) InitInterface() {
+	a.Interface = make(map[string]interface{})
+}
+func (a *CONF) InitString() {
+	a.String = make(map[string]string)
+}
+func (a *CONF) InitInt() {
+	a.Int = make(map[string]int64)
+}
+func (a *CONF) InitFloat() {
+	a.Float = make(map[string]float64)
+}
+func (a *CONF) InitByte() {
 	a.Byte = make(map[string][]byte)
 }
 
-func (a *CONF) ClearBool() {
-	a.Bool = make(map[string]bool)
-}
-func (a *CONF) ClearInterface() {
-	a.Interface = make(map[string]interface{})
-}
-func (a *CONF) ClearString() {
-	a.String = make(map[string]string)
-}
-func (a *CONF) ClearInt() {
-	a.Int = make(map[string]int64)
-}
-func (a *CONF) ClearFloat() {
-	a.Float = make(map[string]float64)
-}
-func (a *CONF) ClearByte() {
-	a.Byte = make(map[string][]byte)
+func (a *CONF) InitConf() {
+	a.Conf = make(map[string]*CONF)
 }
