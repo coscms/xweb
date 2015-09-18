@@ -708,13 +708,20 @@ func (c *Action) GetFuncs() template.FuncMap {
 }
 
 func (c *Action) SetConfig(name string, value interface{}) {
-	c.App.Config[name] = value
+	c.App.SetConfig(name, value)
 }
 
 func (c *Action) GetConfig(name string) interface{} {
-	return c.App.Config[name]
+	return c.App.GetConfig(name)
 }
 
+func (c *Action) SetConfigString(name string, value string) {
+	c.App.SetConfigString(name, value)
+}
+
+func (c *Action) GetConfigString(name string) string {
+	return c.App.GetConfigString(name)
+}
 func (c *Action) RenderString(content string, params ...*T) error {
 	return c.NamedRender(str.Md5(content), content, params...)
 }

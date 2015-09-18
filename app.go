@@ -57,7 +57,7 @@ type App struct {
 	filters            []Filter
 	Server             *Server
 	AppConfig          *AppConfig
-	Config             map[string]interface{}
+	Config             *CONF
 	Actions            map[string]interface{}
 	ActionsPath        map[reflect.Type]string
 	ActionsNamePath    map[string]string
@@ -123,7 +123,14 @@ func NewApp(path string, name string) *App {
 			CheckXsrf:         true,
 			FormMapToStruct:   true,
 		},
-		Config:             map[string]interface{}{},
+		Config: &CONF{
+			Bool:      make(map[string]bool),
+			Interface: make(map[string]interface{}),
+			String:    make(map[string]string),
+			Int:       make(map[string]int64),
+			Float:     make(map[string]float64),
+			Byte:      make(map[string][]byte),
+		},
 		Actions:            map[string]interface{}{},
 		ActionsPath:        map[reflect.Type]string{},
 		ActionsNamePath:    map[string]string{},
@@ -216,21 +223,22 @@ func (a *App) getTemplatePath(name string) string {
 }
 
 func (app *App) SetConfig(name string, val interface{}) {
-	app.Config[name] = val
+	app.Config.SetInterface(name, val)
 }
 
 func (app *App) GetConfig(name string) interface{} {
-	return app.Config[name]
+	return app.Config.GetInterface(name)
+}
+
+func (app *App) SetConfigString(name string, val string) {
+	app.Config.SetString(name, val)
+}
+
+func (app *App) GetConfigString(name string) string {
+	return app.Config.GetString(name)
 }
 
 func (app *App) AddAction(cs ...interface{}) {
-	/*
-		basePath := app.BasePath
-		fmt.Println(app.Name, "=", app.Domain)
-		if app.Domain != "" {
-			basePath = "/"
-		}
-	*/
 	for _, c := range cs {
 		app.AddRouter("/", c)
 	}
