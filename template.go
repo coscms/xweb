@@ -29,18 +29,20 @@ import (
  */
 var (
 	DefaultFuncs template.FuncMap = template.FuncMap{
-		"Now":        Now,
-		"Eq":         Eq,
-		"FormatDate": FormatDate,
-		"Add":        Add,
-		"Subtract":   Subtract,
-		"IsNil":      IsNil,
-		"Url":        Url,
-		"UrlFor":     UrlFor,
-		"Html":       Html,
-		"Js":         Js,
-		"Css":        Css,
-		"XsrfField":  XsrfName, //alias
+		"Now":         Now,
+		"Eq":          Eq,
+		"FormatDate":  FormatDate,
+		"Add":         Add,
+		"Subtract":    Subtract,
+		"IsNil":       IsNil,
+		"Url":         Url,
+		"UrlFor":      UrlFor,
+		"Html":        Html,
+		"Js":          Js,
+		"Css":         Css,
+		"XsrfField":   XsrfName, //alias
+		"HtmlAttr":    HtmlAttr,
+		"ToHtmlAttrs": ToHtmlAttrs,
 	}
 	DefaultTemplateMgr *TemplateMgr = new(TemplateMgr)
 )
@@ -175,6 +177,18 @@ func Eq(left interface{}, right interface{}) bool {
 
 func Html(raw string) template.HTML {
 	return template.HTML(raw)
+}
+
+func HtmlAttr(raw string) template.HTMLAttr {
+	return template.HTMLAttr(raw)
+}
+
+func ToHtmlAttrs(raw map[string]interface{}) (r map[template.HTMLAttr]interface{}) {
+	r = make(map[template.HTMLAttr]interface{})
+	for k, v := range raw {
+		r[HtmlAttr(k)] = v
+	}
+	return
 }
 
 func Js(raw string) template.JS {
