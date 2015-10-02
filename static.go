@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 
 	"github.com/howeyc/fsnotify"
 )
@@ -14,13 +15,14 @@ import (
 var DefaultStaticVerMgr *StaticVerMgr = new(StaticVerMgr)
 
 type StaticVerMgr struct {
-	Caches   map[string]string
-	Combined map[string][]string
-	Combines map[string]bool
-	mutex    *sync.Mutex
-	Path     string
-	Ignores  map[string]bool
-	app      *App
+	Caches        map[string]string
+	Combined      map[string][]string
+	Combines      map[string]bool
+	mutex         *sync.Mutex
+	Path          string
+	Ignores       map[string]bool
+	app           *App
+	TimerCallback func() bool
 }
 
 func (self *StaticVerMgr) Moniter(staticPath string) error {
@@ -28,7 +30,7 @@ func (self *StaticVerMgr) Moniter(staticPath string) error {
 	if err != nil {
 		return err
 	}
-
+	defer watcher.Close()
 	done := make(chan bool)
 	go func() {
 		for {
@@ -78,6 +80,13 @@ func (self *StaticVerMgr) Moniter(staticPath string) error {
 				}
 			case err := <-watcher.Error:
 				self.app.Errorf("error: %v", err)
+			case <-time.After(time.Second * 2):
+				if self.TimerCallback != nil {
+					if self.TimerCallback() == false {
+						close(done)
+						return
+					}
+				}
 			}
 		}
 	}()
@@ -95,8 +104,6 @@ func (self *StaticVerMgr) Moniter(staticPath string) error {
 	}
 
 	<-done
-
-	watcher.Close()
 	return nil
 }
 
@@ -111,6 +118,20 @@ func (self *StaticVerMgr) Init(app *App, staticPath string) error {
 
 	if dirExists(staticPath) {
 		//self.CacheAll(staticPath)
+		if self.TimerCallback == nil {
+			self.TimerCallback = func() bool {
+				//更改模板主题后，关闭当前监控，重新监控新目录
+				if self.app.AppConfig.StaticDir == self.Path {
+					return true
+				}
+				self.Caches = make(map[string]string)
+				self.Combined = make(map[string][]string)
+				self.Combines = make(map[string]bool)
+				self.Path = self.app.AppConfig.StaticDir
+				go self.Moniter(self.Path)
+				return false
+			}
+		}
 		go self.Moniter(staticPath)
 	}
 

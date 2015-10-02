@@ -474,6 +474,8 @@ func (self *TemplateMgr) Init(app *App, rootDir string, reload bool) error {
 					if self.app.AppConfig.TemplateDir == self.RootDir {
 						return true
 					}
+					self.Caches = make(map[string][]byte)
+					self.Ignores = make(map[string]bool)
 					self.RootDir = self.app.AppConfig.TemplateDir
 					go self.Moniter(self.RootDir)
 					return false
