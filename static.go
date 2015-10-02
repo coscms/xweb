@@ -124,6 +124,9 @@ func (self *StaticVerMgr) Init(app *App, staticPath string) error {
 				if self.app.AppConfig.StaticDir == self.Path {
 					return true
 				}
+				for f, _ := range self.Combines {
+					os.Remove(self.Path + f)
+				}
 				self.Caches = make(map[string]string)
 				self.Combined = make(map[string][]string)
 				self.Combines = make(map[string]bool)
@@ -226,7 +229,7 @@ func (self *StaticVerMgr) DeleteCombined(url string) {
 			if _, has := self.Combines[v]; !has {
 				continue
 			}
-			err := os.Remove(self.app.AppConfig.StaticDir + v)
+			err := os.Remove(self.Path + v)
 			delete(self.Combines, v)
 			if err != nil {
 				fmt.Println(err)
