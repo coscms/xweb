@@ -12,9 +12,9 @@ import (
 	"strings"
 	"time"
 
-	"golang.org/x/net/netutil"
 	"github.com/coscms/xweb/httpsession"
 	"github.com/coscms/xweb/log"
+	"golang.org/x/net/netutil"
 )
 
 // ServerConfig is configuration for server objects.
@@ -31,6 +31,8 @@ type ServerConfig struct {
 	StaticHtmlDir          string
 	SessionTimeout         time.Duration
 	MaxConnections         int
+	UseSSL                 bool
+	TlsConfig              *tls.Config
 }
 
 // Server represents a xweb server.
@@ -217,7 +219,20 @@ func (s *Server) Process(w http.ResponseWriter, req *http.Request) {
 }
 
 // Run starts the web application and serves HTTP requests for s
-func (s *Server) Run(addr string) {
+func (s *Server) Run(addr string) error {
+	if s.Config.UseSSL {
+		return s.RunTLS(addr, s.Config.TlsConfig)
+	}
+	l, err := net.Listen("tcp", addr)
+	if err != nil {
+		s.Logger.Error("ListenAndServe:", err)
+		return err
+	}
+	s.Logger.Infof("http server is listening %s", addr)
+	return s.run(addr, l)
+}
+
+func (s *Server) run(addr string, l net.Listener) (err error) {
 	addrs := strings.Split(addr, ":")
 	s.Config.Addr = addrs[0]
 	s.Config.Port, _ = strconv.Atoi(addrs[1])
@@ -258,18 +273,13 @@ func (s *Server) Run(addr string) {
 		}
 	})
 
-	s.Logger.Infof("http server is listening %s", addr)
-
-	l, err := net.Listen("tcp", addr)
-	if err != nil {
-		s.Logger.Error("ListenAndServe:", err)
-	}
 	if s.Config.MaxConnections > 0 {
 		l = netutil.LimitListener(l, s.Config.MaxConnections)
 	}
 	s.l = l
 	err = http.Serve(s.l, mux)
-	s.l.Close()
+	s.Close()
+	return
 }
 
 // RunFcgi starts the web application and serves FastCGI requests for s.
@@ -288,27 +298,25 @@ func (s *Server) RunScgi(addr string) {
 
 // RunTLS starts the web application and serves HTTPS requests for s.
 func (s *Server) RunTLS(addr string, config *tls.Config) error {
-	s.initServer()
-	mux := http.NewServeMux()
-	mux.Handle("/", s)
 	l, err := tls.Listen("tcp", addr, config)
 	if err != nil {
 		s.Logger.Errorf("Listen: %v", err)
 		return err
 	}
-
-	s.l = l
-
 	s.Logger.Infof("https server is listening %s", addr)
-
-	return http.Serve(s.l, mux)
+	return s.run(addr, l)
 }
 
 // Close stops server s.
 func (s *Server) Close() {
 	if s.l != nil {
 		s.l.Close()
+		s.l = nil
 	}
+}
+
+func (s *Server) IsRunning() bool {
+	return s.l != nil
 }
 
 // SetLogger sets the logger for server s

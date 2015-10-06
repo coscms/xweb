@@ -1,3 +1,6 @@
 [submodule "docs/docs-zh-CN"]
 	path = docs/docs-zh-CN
 	url = https://github.com/go-xweb/docs-zh-CN.git
+[submodule "lib/manners"]
+	path = lib/manners
+	url = https://github.com/coscms/manners
