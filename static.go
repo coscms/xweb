@@ -22,7 +22,9 @@ type StaticVerMgr struct {
 	Path          string
 	Ignores       map[string]bool
 	app           *App
+	timerCallback func() bool
 	TimerCallback func() bool
+	initialized   bool
 }
 
 func (self *StaticVerMgr) Moniter(staticPath string) error {
@@ -81,8 +83,8 @@ func (self *StaticVerMgr) Moniter(staticPath string) error {
 			case err := <-watcher.Error:
 				self.app.Errorf("error: %v", err)
 			case <-time.After(time.Second * 2):
-				if self.TimerCallback != nil {
-					if self.TimerCallback() == false {
+				if self.timerCallback != nil {
+					if self.timerCallback() == false {
 						close(done)
 						return
 					}
@@ -107,7 +109,58 @@ func (self *StaticVerMgr) Moniter(staticPath string) error {
 	return nil
 }
 
+func (self *StaticVerMgr) defaultTimerCallback() func() bool {
+	return func() bool {
+		if self.TimerCallback != nil {
+			return self.TimerCallback()
+		}
+		//更改模板主题后，关闭当前监控，重新监控新目录
+		if self.app.AppConfig.StaticDir == self.Path {
+			return true
+		}
+		for f, _ := range self.Combines {
+			os.Remove(self.Path + f)
+		}
+		self.Caches = make(map[string]string)
+		self.Combined = make(map[string][]string)
+		self.Combines = make(map[string]bool)
+		self.Path = self.app.AppConfig.StaticDir
+		go self.Moniter(self.Path)
+		return false
+	}
+}
+
+func (self *StaticVerMgr) Close() {
+	self.TimerCallback = func() bool {
+		for f, _ := range self.Combines {
+			os.Remove(self.Path + f)
+		}
+		self.Caches = make(map[string]string)
+		self.Combined = make(map[string][]string)
+		self.Combines = make(map[string]bool)
+		self.TimerCallback = nil
+		return false
+	}
+	self.initialized = false
+}
+
 func (self *StaticVerMgr) Init(app *App, staticPath string) error {
+	if self.initialized {
+		if staticPath == self.Path {
+			return nil
+		} else {
+			self.TimerCallback = func() bool {
+				for f, _ := range self.Combines {
+					os.Remove(self.Path + f)
+				}
+				self.Caches = make(map[string]string)
+				self.Combined = make(map[string][]string)
+				self.Combines = make(map[string]bool)
+				self.TimerCallback = nil
+				return false
+			}
+		}
+	}
 	self.Path = staticPath
 	self.Caches = make(map[string]string)
 	self.Combined = make(map[string][]string)
@@ -118,26 +171,10 @@ func (self *StaticVerMgr) Init(app *App, staticPath string) error {
 
 	if dirExists(staticPath) {
 		//self.CacheAll(staticPath)
-		if self.TimerCallback == nil {
-			self.TimerCallback = func() bool {
-				//更改模板主题后，关闭当前监控，重新监控新目录
-				if self.app.AppConfig.StaticDir == self.Path {
-					return true
-				}
-				for f, _ := range self.Combines {
-					os.Remove(self.Path + f)
-				}
-				self.Caches = make(map[string]string)
-				self.Combined = make(map[string][]string)
-				self.Combines = make(map[string]bool)
-				self.Path = self.app.AppConfig.StaticDir
-				go self.Moniter(self.Path)
-				return false
-			}
-		}
+		self.timerCallback = self.defaultTimerCallback()
 		go self.Moniter(staticPath)
 	}
-
+	self.initialized = true
 	return nil
 }
 

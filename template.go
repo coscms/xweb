@@ -335,7 +335,9 @@ type TemplateMgr struct {
 	IsReload      bool
 	app           *App
 	Preprocessor  func([]byte) []byte
+	timerCallback func() bool
 	TimerCallback func() bool
+	initialized   bool
 }
 
 func (self *TemplateMgr) Moniter(rootDir string) error {
@@ -343,7 +345,7 @@ func (self *TemplateMgr) Moniter(rootDir string) error {
 	if err != nil {
 		return err
 	}
-	//fmt.Println("TemplateMgr watcher is start.")
+	//fmt.Println("[xweb] TemplateMgr watcher is start.")
 	defer watcher.Close()
 	done := make(chan bool)
 	go func() {
@@ -405,8 +407,8 @@ func (self *TemplateMgr) Moniter(rootDir string) error {
 			case err := <-watcher.Error:
 				self.app.Error("error:", err)
 			case <-time.After(time.Second * 2):
-				if self.TimerCallback != nil {
-					if self.TimerCallback() == false {
+				if self.timerCallback != nil {
+					if self.timerCallback() == false {
 						close(done)
 						return
 					}
@@ -429,7 +431,7 @@ func (self *TemplateMgr) Moniter(rootDir string) error {
 	}
 
 	<-done
-	//fmt.Println("TemplateMgr watcher is closed.")
+	//fmt.Println("[xweb] TemplateMgr watcher is closed.")
 	return nil
 }
 
@@ -459,7 +461,51 @@ func (self *TemplateMgr) CacheAll(rootDir string) error {
 	return err
 }
 
+func (self *TemplateMgr) defaultTimerCallback() func() bool {
+	return func() bool {
+		if self.TimerCallback != nil {
+			return self.TimerCallback()
+		}
+		//更改模板主题后，关闭当前监控，重新监控新目录
+		if self.app.AppConfig.TemplateDir == self.RootDir {
+			return true
+		}
+		self.Caches = make(map[string][]byte)
+		self.Ignores = make(map[string]bool)
+		self.RootDir = self.app.AppConfig.TemplateDir
+		go self.Moniter(self.RootDir)
+		return false
+	}
+}
+
+func (self *TemplateMgr) Close() {
+	self.TimerCallback = func() bool {
+		self.Caches = make(map[string][]byte)
+		self.Ignores = make(map[string]bool)
+		self.TimerCallback = nil
+		return false
+	}
+	self.initialized = false
+}
+
 func (self *TemplateMgr) Init(app *App, rootDir string, reload bool) error {
+	if self.initialized {
+		if rootDir == self.RootDir {
+			return nil
+		} else {
+			self.TimerCallback = func() bool {
+				self.Caches = make(map[string][]byte)
+				self.Ignores = make(map[string]bool)
+				self.TimerCallback = nil
+				return false
+			}
+		}
+	} else if !reload {
+		self.TimerCallback = func() bool {
+			self.TimerCallback = nil
+			return false
+		}
+	}
 	self.RootDir = rootDir
 	self.Caches = make(map[string][]byte)
 	self.Ignores = make(map[string]bool)
@@ -468,19 +514,7 @@ func (self *TemplateMgr) Init(app *App, rootDir string, reload bool) error {
 	if dirExists(rootDir) {
 		//self.CacheAll(rootDir)
 		if reload {
-			if self.TimerCallback == nil {
-				self.TimerCallback = func() bool {
-					//更改模板主题后，关闭当前监控，重新监控新目录
-					if self.app.AppConfig.TemplateDir == self.RootDir {
-						return true
-					}
-					self.Caches = make(map[string][]byte)
-					self.Ignores = make(map[string]bool)
-					self.RootDir = self.app.AppConfig.TemplateDir
-					go self.Moniter(self.RootDir)
-					return false
-				}
-			}
+			self.timerCallback = self.defaultTimerCallback()
 			go self.Moniter(rootDir)
 		}
 	}
@@ -488,7 +522,7 @@ func (self *TemplateMgr) Init(app *App, rootDir string, reload bool) error {
 	if len(self.Ignores) == 0 {
 		self.Ignores["*.tmp"] = false
 	}
-
+	self.initialized = true
 	return nil
 }
 

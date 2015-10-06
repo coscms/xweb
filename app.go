@@ -193,6 +193,20 @@ func (a *App) initApp() {
 	}
 }
 
+func (a *App) Close() {
+	if a.AppConfig.StaticFileVersion && a.StaticVerMgr != nil {
+		a.StaticVerMgr.Close()
+	}
+	if a.AppConfig.CacheTemplates && a.TemplateMgr != nil {
+		a.TemplateMgr.Close()
+	}
+	if a.AppConfig.SessionOn && a.Server.SessionManager == nil &&
+		a.SessionManager != nil {
+		//a.SessionManager.Close()
+	}
+
+}
+
 func (a *App) DelDomain() {
 	a.Domain = ""
 	if domain, ok := a.Server.App2Domain[a.Name]; ok {

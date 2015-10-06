@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/coscms/xweb/httpsession"
+	S "github.com/coscms/xweb/lib/manners"
 	"github.com/coscms/xweb/log"
 	"golang.org/x/net/netutil"
 )
@@ -33,6 +34,8 @@ type ServerConfig struct {
 	MaxConnections         int
 	UseSSL                 bool
 	TlsConfig              *tls.Config
+	Debug                  bool
+	GracefulShutdown       bool
 }
 
 // Server represents a xweb server.
@@ -233,6 +236,9 @@ func (s *Server) Run(addr string) error {
 }
 
 func (s *Server) run(addr string, l net.Listener) (err error) {
+	if s.Config.Debug {
+		println(`[xweb] Server "` + s.Name + `" has been launched.`)
+	}
 	addrs := strings.Split(addr, ":")
 	s.Config.Addr = addrs[0]
 	s.Config.Port, _ = strconv.Atoi(addrs[1])
@@ -277,8 +283,15 @@ func (s *Server) run(addr string, l net.Listener) (err error) {
 		l = netutil.LimitListener(l, s.Config.MaxConnections)
 	}
 	s.l = l
-	err = http.Serve(s.l, mux)
+	if s.Config.GracefulShutdown {
+		err = S.Serve(s.l, mux)
+	} else {
+		err = http.Serve(s.l, mux)
+	}
 	s.Close()
+	if s.Config.Debug {
+		println(`[xweb] Server "` + s.Name + `" has been closed.`)
+	}
 	return
 }
 
@@ -309,6 +322,13 @@ func (s *Server) RunTLS(addr string, config *tls.Config) error {
 
 // Close stops server s.
 func (s *Server) Close() {
+	for _, app := range s.Apps {
+		app.Close()
+	}
+	if s.Config.GracefulShutdown {
+		S.Close()
+		s.l = nil
+	}
 	if s.l != nil {
 		s.l.Close()
 		s.l = nil

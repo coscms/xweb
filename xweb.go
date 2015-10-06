@@ -156,10 +156,11 @@ func Serv(name string) *Server {
 // Config is the configuration of the main server.
 var (
 	Config *ServerConfig = &ServerConfig{
-		RecoverPanic: true,
-		EnableGzip:   true,
-		//Profiler: true,
+		RecoverPanic:           true,
+		EnableGzip:             true,
+		Profiler:               false,
 		StaticExtensionsToGzip: []string{".css", ".js"},
+		GracefulShutdown:       true,
 	}
 	Servers    map[string]*Server = make(map[string]*Server) //[SWH|+]
 	mainServer *Server            = NewServer("main")
