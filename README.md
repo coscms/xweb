@@ -18,6 +18,9 @@ QQ群：369240307
 	4. 改进路由注册方式（现在变得更加智能）；
 	5. Server支持限制最大连接数
 	6. 新增对action新返回类型：xweb.JSON/xweb.JSONP/xweb.XML/xweb.FILE等的支持
+	7. app支持绑定子域名
+	8. 改进https服务
+	9. 其它细微调整
 * **v0.4.0** : 
 	1. AddTmplVar改为Assign；
 	2. AddTmplVars改为MultiAssign；
