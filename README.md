@@ -4,14 +4,25 @@ xweb是一个强大的Go语言web框架。
 
 [English](https://github.com/coscms/xweb/blob/master/README_EN.md)
 
-[![Build Status](https://drone.io/github.com/coscms/xweb/status.png)](https://drone.io/github.com/coscms/xweb/latest)  [![Go Walker](http://gowalker.org/api/v1/badge)](http://gowalker.org/github.com/coscms/xweb) [![Bitdeli Badge](https://d2weczhvl823v0.cloudfront.net/go-xweb/xweb/trend.png)](https://bitdeli.com/free "Bitdeli Badge")
+[![Go Walker](http://gowalker.org/api/v1/badge)](http://gowalker.org/github.com/coscms/xweb) [![Bitdeli Badge](https://d2weczhvl823v0.cloudfront.net/go-xweb/xweb/trend.png)](https://bitdeli.com/free "Bitdeli Badge")
 
 ## 技术支持
 
 QQ群：369240307
 
 ## 更新日志
-* **v0.4.0** : AddTmplVar改为Assign；AddTmplVars改为MultiAssign；日志中增加IP、页面大小(单位：字节)以及耗时记录；修复bug
+* **v0.5.0** : 
+	1. Server支持平滑关闭；
+	2. 静态文件和模板文件仅在使用时才缓存（优点：加快服务生效时间和节约内存），支持根据配置自动改变监控目录；
+	3. 支持合并静态资源，支持同步更新合并的静态资源；
+	4. 改进路由注册方式（现在变得更加智能）；
+	5. Server支持限制最大连接数
+	6. 新增对action新返回类型：xweb.JSON/xweb.JSONP/xweb.XML/xweb.FILE等的支持
+* **v0.4.0** : 
+	1. AddTmplVar改为Assign；
+	2. AddTmplVars改为MultiAssign；
+	3. 日志中增加IP、页面字节大小以及耗时记录（便于查找恶意访问来源）；
+	4. 修复bug
 * **v0.3.0** : 增加对称加密、XSRF通用接口，更换hook引擎为更加优雅的events引擎
 * **v0.2.1** : 自动Binding新增对jquery对象，map和array的支持。
 * **v0.2** : 新增 validation 子包，从 [https://github.com/astaxie/beego/tree/master/validation](http://https://github.com/astaxie/beego/tree/master/validation) 拷贝过来。
