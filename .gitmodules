@@ -1,3 +1,6 @@
 [submodule "lib/manners"]
 	path = lib/manners
 	url=https://github.com/admpub/manners
+[submodule "lib/httprouter"]
+	path = lib/httprouter
+	url = https://github.com/admpub/httprouter.git
