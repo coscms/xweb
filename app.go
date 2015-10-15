@@ -612,6 +612,10 @@ func (a *App) routeHandler(req *http.Request, w http.ResponseWriter) {
 }
 
 func (a *App) run(req *http.Request, w http.ResponseWriter, route Route, args []reflect.Value, handlerSuffix string) (isBreak bool, statusCode int, responseSize int64) {
+	handlerName := route.HandlerMethod
+	if handlerSuffix != "" {
+		handlerName += "_" + handlerSuffix
+	}
 	isBreak = true
 	vc := reflect.New(route.HandlerElement)
 	c := &Action{
@@ -629,15 +633,15 @@ func (a *App) run(req *http.Request, w http.ResponseWriter, route Route, args []
 	for k, v := range a.VarMaps {
 		c.T[k] = v
 	}
-
+	elem := vc.Elem()
 	//设置Action字段的值
-	fieldA := vc.Elem().FieldByName("Action")
+	fieldA := elem.FieldByName("Action")
 	if fieldA.IsValid() {
 		fieldA.Set(reflect.ValueOf(c))
 	}
 
 	//设置C字段的值
-	fieldC := vc.Elem().FieldByName("C")
+	fieldC := elem.FieldByName("C")
 	if fieldC.IsValid() {
 		fieldC.Set(reflect.ValueOf(vc))
 	}
@@ -645,13 +649,12 @@ func (a *App) run(req *http.Request, w http.ResponseWriter, route Route, args []
 	//执行Init方法
 	initM := vc.MethodByName("Init")
 	if initM.IsValid() {
-		params := []reflect.Value{}
-		initM.Call(params)
+		initM.Call([]reflect.Value{})
 	}
 
 	//表单数据自动映射到结构体
 	if c.Option.AutoMapForm {
-		a.StructMap(vc.Elem(), req)
+		a.StructMap(elem, req)
 	}
 
 	//验证XSRF
@@ -671,9 +674,10 @@ func (a *App) run(req *http.Request, w http.ResponseWriter, route Route, args []
 			}
 		}
 	}
-	//执行Before方法
 	structName := reflect.ValueOf(route.HandlerElement.Name())
-	actionName := reflect.ValueOf(route.HandlerMethod)
+	actionName := reflect.ValueOf(handlerName)
+	
+	//执行Before方法
 	initM = vc.MethodByName("Before")
 	if initM.IsValid() {
 		structAction := []reflect.Value{structName, actionName}
@@ -682,15 +686,7 @@ func (a *App) run(req *http.Request, w http.ResponseWriter, route Route, args []
 			return
 		}
 	}
-	var (
-		ret []reflect.Value
-		err error
-		)
-	if handlerSuffix!="" {
-		ret, err = a.SafelyCall(vc, route.HandlerMethod+"_"+handlerSuffix, args)
-	}else{
-		ret, err = a.SafelyCall(vc, route.HandlerMethod, args)
-	}
+	ret, err := a.SafelyCall(vc, handlerName, args)
 	if err != nil {
 		//there was an error or panic while calling the handler
 		if a.AppConfig.Mode == Debug {
@@ -708,9 +704,7 @@ func (a *App) run(req *http.Request, w http.ResponseWriter, route Route, args []
 	initM = vc.MethodByName("After")
 	if initM.IsValid() {
 		structAction := []reflect.Value{structName, actionName}
-		for _, v := range ret {
-			structAction = append(structAction, v)
-		}
+		structAction = append(structAction, ret...)
 		if len(structAction) != initM.Type().NumIn() {
 			a.Errorf("Error : %v.After(): The number of params is not adapted.", structName)
 			return
