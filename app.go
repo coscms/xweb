@@ -372,8 +372,10 @@ func (a *App) addEqRoute(r string, methods map[string]bool, t reflect.Type, hand
 	if _, ok := a.RoutesEq[r]; !ok {
 		a.RoutesEq[r] = make(map[string]Route)
 	}
-	for v, _ := range methods {
-		a.RoutesEq[r][v] = Route{HandlerMethod: handler, HandlerElement: t}
+	for v, ok := range methods {
+		m:=map[string]bool{}
+		m[v]=ok
+		a.RoutesEq[r][v] = Route{HttpMethods: m, HandlerMethod: handler, HandlerElement: t}
 	}
 }
 
@@ -411,7 +413,8 @@ func (app *App) AddRouter(url string, c interface{}) {
 			if length >= 2 { //`xweb:"GET|POST /index"`
 				for _, method := range strings.Split(tags[0], "|") {
 					method = strings.ToUpper(method)
-					methods[method] = true
+					m := v.MethodByName(a+"_"+method)
+					methods[method] = m.IsValid()
 				}
 				path = tags[1]
 				if regexp.QuoteMeta(path) == path {
@@ -433,12 +436,15 @@ func (app *App) AddRouter(url string, c interface{}) {
 					if tags[0][0] != '/' { //`xweb:"index"`
 						path = "/" + actionShortName + "/" + path
 					}
-					methods["GET"] = true
-					methods["POST"] = true
+					m := v.MethodByName(a+"_GET")
+					methods["GET"] = m.IsValid()
+					m = v.MethodByName(a+"_POST")
+					methods["POST"] = m.IsValid()
 				} else { //`xweb:"GET|POST"`
 					for _, method := range strings.Split(tags[0], "|") {
 						method = strings.ToUpper(method)
-						methods[method] = true
+						m := v.MethodByName(a+"_"+method)
+						methods[method] = m.IsValid()
 					}
 					path = "/" + actionShortName + "/" + name
 					isEq = true
@@ -446,15 +452,19 @@ func (app *App) AddRouter(url string, c interface{}) {
 			} else {
 				path = "/" + actionShortName + "/" + name
 				isEq = true
-				methods["GET"] = true
-				methods["POST"] = true
+				m := v.MethodByName(a+"_GET")
+				methods["GET"] = m.IsValid()
+				m = v.MethodByName(a+"_POST")
+				methods["POST"] = m.IsValid()
 			}
 			p = strings.TrimRight(url, "/") + path
 		} else {
 			p = strings.TrimRight(url, "/") + "/" + actionShortName + "/" + name
 			isEq = true
-			methods["GET"] = true
-			methods["POST"] = true
+			m := v.MethodByName(a+"_GET")
+			methods["GET"] = m.IsValid()
+			m = v.MethodByName(a+"_POST")
+			methods["POST"] = m.IsValid()
 		}
 		p = removeStick(p)
 		if isEq {
@@ -540,7 +550,11 @@ func (a *App) routeHandler(req *http.Request, w http.ResponseWriter) {
 		if route, ok := routes[allowMethod]; ok {
 			var isBreak bool = false
 			var args []reflect.Value
-			isBreak, statusCode, responseSize = a.run(req, w, route, args)
+			var handlerSuffix string
+			if has, ok := route.HttpMethods[allowMethod]; !ok && has {
+				handlerSuffix=allowMethod
+			}
+			isBreak, statusCode, responseSize = a.run(req, w, route, args, handlerSuffix)
 			if isBreak {
 				return
 			}
@@ -551,9 +565,12 @@ func (a *App) routeHandler(req *http.Request, w http.ResponseWriter) {
 		for _, route := range a.Routes {
 			cr := route.CompiledRegexp
 
+			var handlerSuffix string
 			//if the methods don't match, skip this handler (except HEAD can be used in place of GET)
-			if _, ok := route.HttpMethods[allowMethod]; !ok {
+			if has, ok := route.HttpMethods[allowMethod]; !ok {
 				continue
+			}else if has {
+				handlerSuffix=allowMethod
 			}
 
 			if !cr.MatchString(reqPath) {
@@ -571,7 +588,7 @@ func (a *App) routeHandler(req *http.Request, w http.ResponseWriter) {
 				args = append(args, reflect.ValueOf(arg))
 			}
 			var isBreak bool = false
-			isBreak, statusCode, responseSize = a.run(req, w, route, args)
+			isBreak, statusCode, responseSize = a.run(req, w, route, args, handlerSuffix)
 			if isBreak {
 				return
 			}
@@ -594,7 +611,7 @@ func (a *App) routeHandler(req *http.Request, w http.ResponseWriter) {
 	statusCode = 404
 }
 
-func (a *App) run(req *http.Request, w http.ResponseWriter, route Route, args []reflect.Value) (isBreak bool, statusCode int, responseSize int64) {
+func (a *App) run(req *http.Request, w http.ResponseWriter, route Route, args []reflect.Value, handlerSuffix string) (isBreak bool, statusCode int, responseSize int64) {
 	isBreak = true
 	vc := reflect.New(route.HandlerElement)
 	c := &Action{
@@ -665,8 +682,15 @@ func (a *App) run(req *http.Request, w http.ResponseWriter, route Route, args []
 			return
 		}
 	}
-
-	ret, err := a.SafelyCall(vc, route.HandlerMethod, args)
+	var (
+		ret []reflect.Value
+		err error
+		)
+	if handlerSuffix!="" {
+		ret, err = a.SafelyCall(vc, route.HandlerMethod+"_"+handlerSuffix, args)
+	}else{
+		ret, err = a.SafelyCall(vc, route.HandlerMethod, args)
+	}
 	if err != nil {
 		//there was an error or panic while calling the handler
 		if a.AppConfig.Mode == Debug {
