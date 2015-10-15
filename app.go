@@ -373,8 +373,8 @@ func (a *App) addEqRoute(r string, methods map[string]bool, t reflect.Type, hand
 		a.RoutesEq[r] = make(map[string]Route)
 	}
 	for v, ok := range methods {
-		m:=map[string]bool{}
-		m[v]=ok
+		m := map[string]bool{}
+		m[v] = ok
 		a.RoutesEq[r][v] = Route{HttpMethods: m, HandlerMethod: handler, HandlerElement: t}
 	}
 }
@@ -413,7 +413,7 @@ func (app *App) AddRouter(url string, c interface{}) {
 			if length >= 2 { //`xweb:"GET|POST /index"`
 				for _, method := range strings.Split(tags[0], "|") {
 					method = strings.ToUpper(method)
-					m := v.MethodByName(a+"_"+method)
+					m := v.MethodByName(a + "_" + method)
 					methods[method] = m.IsValid()
 				}
 				path = tags[1]
@@ -436,14 +436,14 @@ func (app *App) AddRouter(url string, c interface{}) {
 					if tags[0][0] != '/' { //`xweb:"index"`
 						path = "/" + actionShortName + "/" + path
 					}
-					m := v.MethodByName(a+"_GET")
+					m := v.MethodByName(a + "_GET")
 					methods["GET"] = m.IsValid()
-					m = v.MethodByName(a+"_POST")
+					m = v.MethodByName(a + "_POST")
 					methods["POST"] = m.IsValid()
 				} else { //`xweb:"GET|POST"`
 					for _, method := range strings.Split(tags[0], "|") {
 						method = strings.ToUpper(method)
-						m := v.MethodByName(a+"_"+method)
+						m := v.MethodByName(a + "_" + method)
 						methods[method] = m.IsValid()
 					}
 					path = "/" + actionShortName + "/" + name
@@ -452,18 +452,18 @@ func (app *App) AddRouter(url string, c interface{}) {
 			} else {
 				path = "/" + actionShortName + "/" + name
 				isEq = true
-				m := v.MethodByName(a+"_GET")
+				m := v.MethodByName(a + "_GET")
 				methods["GET"] = m.IsValid()
-				m = v.MethodByName(a+"_POST")
+				m = v.MethodByName(a + "_POST")
 				methods["POST"] = m.IsValid()
 			}
 			p = strings.TrimRight(url, "/") + path
 		} else {
 			p = strings.TrimRight(url, "/") + "/" + actionShortName + "/" + name
 			isEq = true
-			m := v.MethodByName(a+"_GET")
+			m := v.MethodByName(a + "_GET")
 			methods["GET"] = m.IsValid()
-			m = v.MethodByName(a+"_POST")
+			m = v.MethodByName(a + "_POST")
 			methods["POST"] = m.IsValid()
 		}
 		p = removeStick(p)
@@ -552,7 +552,7 @@ func (a *App) routeHandler(req *http.Request, w http.ResponseWriter) {
 			var args []reflect.Value
 			var handlerSuffix string
 			if has, ok := route.HttpMethods[allowMethod]; !ok && has {
-				handlerSuffix=allowMethod
+				handlerSuffix = allowMethod
 			}
 			isBreak, statusCode, responseSize = a.run(req, w, route, args, handlerSuffix)
 			if isBreak {
@@ -569,8 +569,8 @@ func (a *App) routeHandler(req *http.Request, w http.ResponseWriter) {
 			//if the methods don't match, skip this handler (except HEAD can be used in place of GET)
 			if has, ok := route.HttpMethods[allowMethod]; !ok {
 				continue
-			}else if has {
-				handlerSuffix=allowMethod
+			} else if has {
+				handlerSuffix = allowMethod
 			}
 
 			if !cr.MatchString(reqPath) {
@@ -676,7 +676,7 @@ func (a *App) run(req *http.Request, w http.ResponseWriter, route Route, args []
 	}
 	structName := reflect.ValueOf(route.HandlerElement.Name())
 	actionName := reflect.ValueOf(handlerName)
-	
+
 	//执行Before方法
 	initM = vc.MethodByName("Before")
 	if initM.IsValid() {
