@@ -544,33 +544,35 @@ func (a *App) routeHandler(req *http.Request, w http.ResponseWriter) {
 	if a.Domain == "" && a.BasePath != "/" {
 		reqPath = "/" + strings.TrimPrefix(reqPath, a.BasePath)
 	}
-	allowMethod := Ternary(req.Method == "HEAD", "GET", req.Method).(string)
-	isFind := false
+	reqMethod := Ternary(req.Method == "HEAD", "GET", req.Method).(string)
+	found := false
 	if routes, ok := a.RoutesEq[reqPath]; ok {
-		if route, ok := routes[allowMethod]; ok {
-			var isBreak bool = false
-			var args []reflect.Value
-			var handlerSuffix string
-			if has, ok := route.HttpMethods[allowMethod]; !ok && has {
-				handlerSuffix = allowMethod
+		if route, ok := routes[reqMethod]; ok {
+			var (
+				isBreak       bool
+				args          []reflect.Value
+				handlerSuffix string
+			)
+			if has, ok := route.HttpMethods[reqMethod]; ok && has {
+				handlerSuffix = reqMethod
 			}
 			isBreak, statusCode, responseSize = a.run(req, w, route, args, handlerSuffix)
 			if isBreak {
 				return
 			}
-			isFind = true
+			found = true
 		}
 	}
-	if !isFind {
+	if !found {
 		for _, route := range a.Routes {
 			cr := route.CompiledRegexp
 
 			var handlerSuffix string
 			//if the methods don't match, skip this handler (except HEAD can be used in place of GET)
-			if has, ok := route.HttpMethods[allowMethod]; !ok {
+			if has, ok := route.HttpMethods[reqMethod]; !ok {
 				continue
 			} else if has {
-				handlerSuffix = allowMethod
+				handlerSuffix = reqMethod
 			}
 
 			if !cr.MatchString(reqPath) {
