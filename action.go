@@ -28,8 +28,7 @@ import (
 	"github.com/coscms/xweb/uuid"
 )
 
-type Mapper struct {
-}
+type Mapper struct{}
 
 type T map[string]interface{}
 
@@ -437,6 +436,17 @@ func (c *Action) GetCookie(cookieName string) (*http.Cookie, error) {
 	return c.Request.Cookie(c.App.AppConfig.CookiePrefix + cookieName)
 }
 
+func (c *Action) CookieAuthKey() string {
+	key := c.App.AppConfig.CookieSecret
+	if c.App.AppConfig.CookieLimitIP {
+		key += "|" + c.IP()
+	}
+	if c.App.AppConfig.CookieLimitUA {
+		key += "|" + c.UserAgent()
+	}
+	return key
+}
+
 func (c *Action) SetSecureCookie(name string, val string, args ...interface{}) {
 	//base64 encode the val
 	if len(c.App.AppConfig.CookieSecret) == 0 {
@@ -445,13 +455,7 @@ func (c *Action) SetSecureCookie(name string, val string, args ...interface{}) {
 	}
 	vs := str.Base64Encode(val)
 	vb := []byte(vs)
-	key := c.App.AppConfig.CookieSecret
-	if c.App.AppConfig.CookieLimitIP {
-		key += "|" + c.IP()
-	}
-	if c.App.AppConfig.CookieLimitUA {
-		key += "|" + c.UserAgent()
-	}
+	key := c.CookieAuthKey()
 	timestamp := strconv.FormatInt(time.Now().Unix(), 10)
 	sig := str.Token(key, vb, timestamp)
 	cookie := strings.Join([]string{vs, timestamp, sig}, "|")
@@ -459,24 +463,16 @@ func (c *Action) SetSecureCookie(name string, val string, args ...interface{}) {
 }
 
 func (c *Action) GetSecureCookie(name string) (string, bool) {
-	key := c.App.AppConfig.CookieSecret
-	if c.App.AppConfig.CookieLimitIP {
-		key += "|" + c.IP()
-	}
-	if c.App.AppConfig.CookieLimitUA {
-		key += "|" + c.UserAgent()
-	}
-	name = c.App.AppConfig.CookiePrefix + name
-	for _, cookie := range c.Request.Cookies() {
-		if cookie.Name != name {
-			continue
-		}
-
+	if cookie, err := c.GetCookie(name); err == nil {
 		parts := strings.SplitN(cookie.Value, "|", 3)
-
+		if len(parts) < 3 {
+			return "", false
+		}
 		val := parts[0]
 		timestamp := parts[1]
 		sig := parts[2]
+
+		key := c.CookieAuthKey()
 
 		if str.Token(key, []byte(val), timestamp) != sig {
 			c.SetCookie(NewCookie(name, "", -86400))
@@ -722,6 +718,7 @@ func (c *Action) SetConfigString(name string, value string) {
 func (c *Action) GetConfigString(name string) string {
 	return c.App.GetConfigString(name)
 }
+
 func (c *Action) RenderString(content string, params ...*T) error {
 	return c.NamedRender(str.Md5(content), content, params...)
 }
