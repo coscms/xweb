@@ -97,14 +97,6 @@ type AppConfig struct {
 	AuthBasedOnCookie bool
 }
 
-type Route struct {
-	Path           string          //path string
-	CompiledRegexp *regexp.Regexp  //path regexp
-	HttpMethods    map[string]bool //GET POST HEAD DELETE etc.
-	HandlerMethod  string          //struct method name
-	HandlerElement reflect.Type    //handler element
-}
-
 func NewApp(path string, name string) *App {
 	return &App{
 		BasePath: path,
