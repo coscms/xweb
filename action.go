@@ -689,6 +689,9 @@ func (c *Action) Render(tmpl string, params ...*T) error {
 	if err == nil {
 		err = c.NamedRender(tmpl, string(content), params...)
 	}
+	if err != nil {
+		c.SetBody([]byte(fmt.Sprintf("%v", err)))
+	}
 	return err
 }
 

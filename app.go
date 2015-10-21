@@ -18,6 +18,7 @@ import (
 
 	"github.com/coscms/tagfast"
 	"github.com/coscms/xweb/httpsession"
+	"github.com/coscms/xweb/lib/route"
 	"github.com/coscms/xweb/log"
 )
 
@@ -52,8 +53,7 @@ type App struct {
 	BasePath           string
 	Name               string
 	Domain             string
-	Routes             []Route
-	RoutesEq           map[string]map[string]Route //r["/example"]["POST"]
+	Route              *route.Route
 	filters            []Filter
 	Server             *Server
 	AppConfig          *AppConfig
@@ -109,7 +109,7 @@ func NewApp(path string, name string) *App {
 	return &App{
 		BasePath: path,
 		Name:     name,
-		RoutesEq: make(map[string]map[string]Route),
+		Route:    route.NewRoute(),
 		AppConfig: &AppConfig{
 			Mode:              Product,
 			StaticDir:         "static",
@@ -353,32 +353,6 @@ func (app *App) filter(w http.ResponseWriter, req *http.Request) bool {
 	return true
 }
 
-/**
- * r		: 	网址
- * methods	:   HTTP访问方式（GET、POST...）
- * t		:	控制器实例反射
- * handler	:	控制器中的方法函数名
- */
-func (a *App) addRoute(r string, methods map[string]bool, t reflect.Type, handler string) {
-	cr, err := regexp.Compile(r)
-	if err != nil {
-		a.Errorf("Error in route regex %q: %s", r, err)
-		return
-	}
-	a.Routes = append(a.Routes, Route{Path: r, CompiledRegexp: cr, HttpMethods: methods, HandlerMethod: handler, HandlerElement: t})
-}
-
-func (a *App) addEqRoute(r string, methods map[string]bool, t reflect.Type, handler string) {
-	if _, ok := a.RoutesEq[r]; !ok {
-		a.RoutesEq[r] = make(map[string]Route)
-	}
-	for v, ok := range methods {
-		m := map[string]bool{}
-		m[v] = ok
-		a.RoutesEq[r][v] = Route{HttpMethods: m, HandlerMethod: handler, HandlerElement: t}
-	}
-}
-
 func (app *App) AddRouter(url string, c interface{}) {
 	t := reflect.TypeOf(c).Elem()
 	v := reflect.ValueOf(c)
@@ -405,7 +379,6 @@ func (app *App) AddRouter(url string, c interface{}) {
 		tagStr := tag.Get("xweb")
 		methods := map[string]bool{} //map[string]bool{"GET": true, "POST": true}
 		var p string
-		var isEq bool
 		if tagStr != "" {
 			tags := strings.Split(tagStr, " ")
 			path := tagStr
@@ -417,9 +390,6 @@ func (app *App) AddRouter(url string, c interface{}) {
 					methods[method] = m.IsValid()
 				}
 				path = tags[1]
-				if regexp.QuoteMeta(path) == path {
-					isEq = true
-				}
 				if path == "" {
 					path = name
 				}
@@ -430,9 +400,6 @@ func (app *App) AddRouter(url string, c interface{}) {
 				if matched, _ := regexp.MatchString(`^[A-Z]+(\|[A-Z]+)*$`, tags[0]); !matched {
 					//非全大写字母时，判断为网址规则
 					path = tags[0]
-					if regexp.QuoteMeta(path) == path {
-						isEq = true
-					}
 					if tags[0][0] != '/' { //`xweb:"index"`
 						path = "/" + actionShortName + "/" + path
 					}
@@ -447,11 +414,9 @@ func (app *App) AddRouter(url string, c interface{}) {
 						methods[method] = m.IsValid()
 					}
 					path = "/" + actionShortName + "/" + name
-					isEq = true
 				}
 			} else {
 				path = "/" + actionShortName + "/" + name
-				isEq = true
 				m := v.MethodByName(a + "_GET")
 				methods["GET"] = m.IsValid()
 				m = v.MethodByName(a + "_POST")
@@ -460,19 +425,13 @@ func (app *App) AddRouter(url string, c interface{}) {
 			p = strings.TrimRight(url, "/") + path
 		} else {
 			p = strings.TrimRight(url, "/") + "/" + actionShortName + "/" + name
-			isEq = true
 			m := v.MethodByName(a + "_GET")
 			methods["GET"] = m.IsValid()
 			m = v.MethodByName(a + "_POST")
 			methods["POST"] = m.IsValid()
 		}
 		p = removeStick(p)
-		if isEq {
-			app.addEqRoute(p, methods, t, a)
-			app.ActionsMethodRoute[actionFullName][name] = p
-		} else {
-			app.addRoute(p, methods, t, a)
-		}
+		app.Route.Set(p, a, methods, t)
 		app.Debug("Action:", actionFullName+"."+a+";", "Route Information:", p+";", "Request Method:", methods)
 	}
 }
@@ -545,55 +504,18 @@ func (a *App) routeHandler(req *http.Request, w http.ResponseWriter) {
 		reqPath = "/" + strings.TrimPrefix(reqPath, a.BasePath)
 	}
 	reqMethod := Ternary(req.Method == "HEAD", "GET", req.Method).(string)
-	found := false
-	if routes, ok := a.RoutesEq[reqPath]; ok {
-		if route, ok := routes[reqMethod]; ok {
-			var (
-				isBreak       bool
-				args          []reflect.Value
-				handlerSuffix string
-			)
-			if has, ok := route.HttpMethods[reqMethod]; ok && has {
-				handlerSuffix = reqMethod
-			}
-			isBreak, statusCode, responseSize = a.run(req, w, route, args, handlerSuffix)
-			if isBreak {
-				return
-			}
-			found = true
+	args, fnName, rfType, on := a.Route.Get(reqPath, reqMethod)
+	if rfType != nil {
+		var (
+			isBreak bool
+			suffix  string
+		)
+		if on {
+			suffix = reqMethod
 		}
-	}
-	if !found {
-		for _, route := range a.Routes {
-			cr := route.CompiledRegexp
-
-			var handlerSuffix string
-			//if the methods don't match, skip this handler (except HEAD can be used in place of GET)
-			if has, ok := route.HttpMethods[reqMethod]; !ok {
-				continue
-			} else if has {
-				handlerSuffix = reqMethod
-			}
-
-			if !cr.MatchString(reqPath) {
-				continue
-			}
-
-			match := cr.FindStringSubmatch(reqPath)
-
-			if match[0] != reqPath {
-				continue
-			}
-
-			var args []reflect.Value
-			for _, arg := range match[1:] {
-				args = append(args, reflect.ValueOf(arg))
-			}
-			var isBreak bool = false
-			isBreak, statusCode, responseSize = a.run(req, w, route, args, handlerSuffix)
-			if isBreak {
-				return
-			}
+		isBreak, statusCode, responseSize = a.run(req, w, fnName, rfType, args, suffix)
+		if isBreak {
+			return
 		}
 	}
 	// try serving index.html or index.htm
@@ -613,13 +535,16 @@ func (a *App) routeHandler(req *http.Request, w http.ResponseWriter) {
 	statusCode = 404
 }
 
-func (a *App) run(req *http.Request, w http.ResponseWriter, route Route, args []reflect.Value, handlerSuffix string) (isBreak bool, statusCode int, responseSize int64) {
-	handlerName := route.HandlerMethod
+func (a *App) run(req *http.Request, w http.ResponseWriter,
+	handlerName string, reflectType reflect.Type,
+	args []reflect.Value, handlerSuffix string) (isBreak bool,
+	statusCode int, responseSize int64) {
+
 	if handlerSuffix != "" {
 		handlerName += "_" + handlerSuffix
 	}
 	isBreak = true
-	vc := reflect.New(route.HandlerElement)
+	vc := reflect.New(reflectType)
 	c := &Action{
 		Request:        req,
 		App:            a,
@@ -668,7 +593,9 @@ func (a *App) run(req *http.Request, w http.ResponseWriter, route Route, args []
 			if len(formVals) > 0 {
 				formVal = formVals[0]
 			}
-			if formVal == "" || !a.XsrfManager.Valid(a.AppConfig.CookiePrefix+XSRF_TAG, formVal) {
+			if formVal == "" ||
+				!a.XsrfManager.Valid(a.AppConfig.CookiePrefix+
+					XSRF_TAG, formVal) {
 				a.error(w, 500, "xsrf token error.")
 				a.Error("xsrf token error.")
 				statusCode = 500
@@ -676,7 +603,7 @@ func (a *App) run(req *http.Request, w http.ResponseWriter, route Route, args []
 			}
 		}
 	}
-	structName := reflect.ValueOf(route.HandlerElement.Name())
+	structName := reflect.ValueOf(reflectType.Name())
 	actionName := reflect.ValueOf(handlerName)
 
 	//执行Before方法
@@ -1169,28 +1096,28 @@ example:
 */
 func (app *App) Nodes() (r map[string]map[string][]string) {
 	r = make(map[string]map[string][]string)
-	for _, val := range app.Routes {
-		name := val.HandlerElement.Name()
+	for _, val := range app.Route.Regexp {
+		name := val.ReflectType.Name()
 		if _, ok := r[name]; !ok {
 			r[name] = make(map[string][]string)
 		}
-		if _, ok := r[name][val.HandlerMethod]; !ok {
-			r[name][val.HandlerMethod] = make([]string, 0)
+		if _, ok := r[name][val.ExecuteFunc]; !ok {
+			r[name][val.ExecuteFunc] = make([]string, 0)
 		}
-		for k, _ := range val.HttpMethods {
-			r[name][val.HandlerMethod] = append(r[name][val.HandlerMethod], k) //FUNC1:[POST,GET]
+		for k, _ := range val.RequestMethod {
+			r[name][val.ExecuteFunc] = append(r[name][val.ExecuteFunc], k) //FUNC1:[POST,GET]
 		}
 	}
-	for _, vals := range app.RoutesEq {
-		for k, v := range vals {
-			name := v.HandlerElement.Name()
-			if _, ok := r[name]; !ok {
-				r[name] = make(map[string][]string)
-			}
-			if _, ok := r[name][v.HandlerMethod]; !ok {
-				r[name][v.HandlerMethod] = make([]string, 0)
-			}
-			r[name][v.HandlerMethod] = append(r[name][v.HandlerMethod], k) //FUNC1:[POST,GET]
+	for _, val := range app.Route.Static {
+		name := val.ReflectType.Name()
+		if _, ok := r[name]; !ok {
+			r[name] = make(map[string][]string)
+		}
+		if _, ok := r[name][val.ExecuteFunc]; !ok {
+			r[name][val.ExecuteFunc] = make([]string, 0)
+		}
+		for k, _ := range val.RequestMethod {
+			r[name][val.ExecuteFunc] = append(r[name][val.ExecuteFunc], k) //FUNC1:[POST,GET]
 		}
 	}
 	return

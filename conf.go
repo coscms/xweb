@@ -17,9 +17,9 @@ func (a *CONF) GetConf(k string) *CONF {
 	if v, ok := a.Conf[k]; ok {
 		return v
 	}
-	c := &CONF{}
-	c.Init()
-	return c
+	a.Conf[k] = &CONF{}
+	a.Conf[k].Init()
+	return a.Conf[k]
 }
 
 func (a *CONF) SetConf(k string, v *CONF) {
