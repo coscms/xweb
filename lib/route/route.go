@@ -1,6 +1,7 @@
 package route
 
 import (
+	//"fmt"
 	"reflect"
 	"regexp"
 )
@@ -35,7 +36,8 @@ type RegexpRoute struct {
 	ExecuteFunc   string
 }
 
-func (r *Route) Set(route string, execFunc string, reqMethod map[string]bool, refType reflect.Type) {
+func (r *Route) Set(route string, execFunc string,
+	reqMethod map[string]bool, refType reflect.Type) {
 	routeReg := regexp.QuoteMeta(route)
 	if route == routeReg {
 		a := &StaticRoute{
@@ -59,7 +61,8 @@ func (r *Route) Set(route string, execFunc string, reqMethod map[string]bool, re
 	}
 }
 
-func (r *Route) Get(reqPath string, reqMethod string) ([]reflect.Value, string, reflect.Type, bool) {
+func (r *Route) Get(reqPath string, reqMethod string) ([]reflect.Value,
+	string, reflect.Type, bool) {
 	if route, ok := r.Static[reqPath]; ok {
 		on, ok := route.RequestMethod[reqMethod]
 		if ok {
@@ -100,6 +103,6 @@ func (r *Route) Rego(vOriginal string, vNew string) (length int, staticPath stri
 	}
 	length = len(same)
 	staticPath = string(same)
-	regexpInstance = regexp.MustCompile(vNew[length:])
+	regexpInstance = regexp.MustCompile(vOriginal[length:])
 	return
 }

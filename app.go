@@ -497,7 +497,7 @@ func (a *App) routeHandler(req *http.Request, w http.ResponseWriter) {
 	}
 	reqMethod := Ternary(req.Method == "HEAD", "GET", req.Method).(string)
 	args, fnName, rfType, on := a.Route.Get(reqPath, reqMethod)
-	if rfType != nil {
+	if rfType != nil && fnName != "" {
 		var (
 			isBreak bool
 			suffix  string
