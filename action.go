@@ -55,6 +55,11 @@ type Action struct {
 	StatusCode    int
 	ResponseSize  int64
 	JsonpCallback string
+	ExtensionName string
+}
+
+func (c *Action) Self() interface{} {
+	return c.C.Elem().Interface()
 }
 
 // Protocol returns request protocol name, such as HTTP/1.1 .

@@ -1,5 +1,17 @@
 package xweb
 
+func NewCONF() *CONF {
+	return &CONF{
+		Bool:      make(map[string]bool),
+		Interface: make(map[string]interface{}),
+		String:    make(map[string]string),
+		Int:       make(map[string]int64),
+		Float:     make(map[string]float64),
+		Byte:      make(map[string][]byte),
+		Conf:      make(map[string]*CONF),
+	}
+}
+
 type CONF struct {
 	Bool      map[string]bool
 	Interface map[string]interface{}

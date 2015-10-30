@@ -205,6 +205,7 @@ func (s *Server) Process(w http.ResponseWriter, req *http.Request) {
 			}
 			if appName != "" {
 				if app := s.App(appName); app != nil {
+					app.RequestTime = s.RootApp.RequestTime
 					app.routeHandler(req, w)
 					return
 				}

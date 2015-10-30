@@ -76,6 +76,22 @@ type App struct {
 	XsrfManager
 }
 
+func NewAppConfig() *AppConfig {
+	return &AppConfig{
+		Mode:              Product,
+		StaticDir:         "static",
+		TemplateDir:       "templates",
+		SessionOn:         true,
+		SessionTimeout:    3600,
+		MaxUploadSize:     10 * 1024 * 1024,
+		StaticFileVersion: true,
+		CacheTemplates:    true,
+		ReloadTemplates:   true,
+		CheckXsrf:         true,
+		FormMapToStruct:   true,
+	}
+}
+
 type AppConfig struct {
 	Mode              int
 	StaticDir         string
@@ -99,31 +115,11 @@ type AppConfig struct {
 
 func NewApp(path string, name string) *App {
 	return &App{
-		BasePath: path,
-		Name:     name,
-		Route:    route.NewRoute(),
-		AppConfig: &AppConfig{
-			Mode:              Product,
-			StaticDir:         "static",
-			TemplateDir:       "templates",
-			SessionOn:         true,
-			SessionTimeout:    3600,
-			MaxUploadSize:     10 * 1024 * 1024,
-			StaticFileVersion: true,
-			CacheTemplates:    true,
-			ReloadTemplates:   true,
-			CheckXsrf:         true,
-			FormMapToStruct:   true,
-		},
-		Config: &CONF{
-			Bool:      make(map[string]bool),
-			Interface: make(map[string]interface{}),
-			String:    make(map[string]string),
-			Int:       make(map[string]int64),
-			Float:     make(map[string]float64),
-			Byte:      make(map[string][]byte),
-			Conf:      make(map[string]*CONF),
-		},
+		BasePath:           path,
+		Name:               name,
+		Route:              route.NewRoute(),
+		AppConfig:          NewAppConfig(),
+		Config:             NewCONF(),
 		Actions:            map[string]interface{}{},
 		ActionsPath:        map[reflect.Type]string{},
 		ActionsNamePath:    map[string]string{},
@@ -489,6 +485,12 @@ func (a *App) routeHandler(req *http.Request, w http.ResponseWriter) {
 		statusCode = 302
 		return
 	}
+	extension := ".html"
+	if epos := strings.LastIndex(req.URL.Path, "."); epos > 0 {
+		extension = req.URL.Path[epos:]
+		req.URL.Path = req.URL.Path[0:epos]
+	}
+
 	requestPath = req.URL.Path //支持filter更改req.URL.Path
 
 	reqPath := removeStick(requestPath)
@@ -505,7 +507,7 @@ func (a *App) routeHandler(req *http.Request, w http.ResponseWriter) {
 		if on {
 			suffix = reqMethod
 		}
-		isBreak, statusCode, responseSize = a.run(req, w, fnName, rfType, args, suffix)
+		isBreak, statusCode, responseSize = a.run(req, w, fnName, rfType, args, suffix, extension)
 		if isBreak {
 			return
 		}
@@ -529,7 +531,7 @@ func (a *App) routeHandler(req *http.Request, w http.ResponseWriter) {
 
 func (a *App) run(req *http.Request, w http.ResponseWriter,
 	handlerName string, reflectType reflect.Type,
-	args []reflect.Value, handlerSuffix string) (isBreak bool,
+	args []reflect.Value, handlerSuffix string, extensionName string) (isBreak bool,
 	statusCode int, responseSize int64) {
 
 	if handlerSuffix != "" {
@@ -547,6 +549,7 @@ func (a *App) run(req *http.Request, w http.ResponseWriter,
 			AutoMapForm: a.AppConfig.FormMapToStruct,
 			CheckXsrf:   a.AppConfig.CheckXsrf,
 		},
+		ExtensionName: extensionName,
 	}
 
 	for k, v := range a.VarMaps {
@@ -681,6 +684,22 @@ func (a *App) run(req *http.Request, w http.ResponseWriter,
 	} else if byt, ok := intf.([]byte); ok {
 		content = byt
 	} else {
+		Event("OutputBaseOnExtensionName", []interface{}{c, intf}, func(ok bool) {
+			if !ok {
+				return
+			}
+
+			switch c.ExtensionName {
+			case ".json":
+				c.ServeJson(intf)
+				responseSize = c.ResponseSize
+				return
+			case ".xml":
+				c.ServeXml(intf)
+				responseSize = c.ResponseSize
+				return
+			}
+		})
 		a.Warnf("unknown returned result type %v, ignored %v", kind, intf)
 		return
 	}
