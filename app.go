@@ -684,8 +684,10 @@ func (a *App) run(req *http.Request, w http.ResponseWriter,
 	} else if byt, ok := intf.([]byte); ok {
 		content = byt
 	} else {
+		var validType bool
 		Event("OutputBaseOnExtensionName", []interface{}{c, intf}, func(ok bool) {
 			if !ok {
+				validType = true
 				return
 			}
 
@@ -693,15 +695,17 @@ func (a *App) run(req *http.Request, w http.ResponseWriter,
 			case ".json":
 				c.ServeJson(intf)
 				responseSize = c.ResponseSize
-				return
+				validType = true
 			case ".xml":
 				c.ServeXml(intf)
 				responseSize = c.ResponseSize
-				return
+				validType = true
 			}
 		})
-		a.Warnf("unknown returned result type %v, ignored %v", kind, intf)
-		return
+		if !validType {
+			a.Warnf("unknown returned result type %v, ignored %v", kind, intf)
+			return
+		}
 	}
 
 	w.Header().Set("Content-Length", strconv.Itoa(len(content)))
