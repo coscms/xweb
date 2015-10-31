@@ -80,7 +80,7 @@ func (r *Route) Get(reqPath string, reqMethod string) ([]reflect.Value,
 		}
 		part := reqPath[route.StaticLength:]
 		p := route.Regexp.FindStringSubmatch(part)
-		if p[0] != part {
+		if len(p) < 1 || p[0] != part {
 			continue
 		}
 		var args []reflect.Value
@@ -104,5 +104,6 @@ func (r *Route) Rego(vOriginal string, vNew string) (length int, staticPath stri
 	length = len(same)
 	staticPath = string(same)
 	regexpInstance = regexp.MustCompile(vOriginal[length:])
+	//println(vOriginal, staticPath, vOriginal[length:])
 	return
 }
