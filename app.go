@@ -35,7 +35,7 @@ type JSONP struct {
 	Callback string
 }
 
-type RENDER struct {
+type SHOW struct {
 	Tmpl string
 	*T
 }
@@ -680,7 +680,7 @@ func (a *App) run(req *http.Request, w http.ResponseWriter,
 	} else if obj, ok := intf.(FILE); ok {
 		c.ServeFile(obj.Data)
 		return
-	} else if obj, ok := intf.(RENDER); ok {
+	} else if obj, ok := intf.(SHOW); ok {
 		c.Render(obj.Tmpl, obj.T)
 		return
 	} else if obj, ok := intf.(JUMP); ok {
