@@ -23,6 +23,11 @@ func Event(eventName string, session interface{}, next func(bool)) {
 	Events.Execute(eventName, session, next)
 }
 
+//删除事件
+func DelEvent(eventName string) {
+	Events.Delete(eventName)
+}
+
 //添加事件
 func AddEvent(eventName string, handler func(interface{}, func(bool))) {
 	Events.Register(eventName, handler)
@@ -57,6 +62,18 @@ func (e *EventsInstance) Register(eventName string, handler func(interface{}, fu
 		e.listeners[eventName] = make([]func(interface{}, func(bool)), 0)
 	}
 	e.listeners[eventName] = append(e.listeners[eventName], handler)
+}
+
+func (e *EventsInstance) Delete(eventName string) {
+	e.lock.Lock()
+	defer e.lock.Unlock()
+	if e.listeners == nil {
+		return
+	}
+	_, ok := e.listeners[eventName]
+	if ok {
+		delete(e.listeners, eventName)
+	}
 }
 
 /*
