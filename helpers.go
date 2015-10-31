@@ -265,7 +265,7 @@ func XsrfName() string {
 
 func redirect(w http.ResponseWriter, url string, status ...int) error {
 	s := 302
-	if len(status) > 0 {
+	if len(status) > 0 && status[0] != 0 {
 		s = status[0]
 	}
 	w.Header().Set("Location", url)

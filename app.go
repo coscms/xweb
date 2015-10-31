@@ -35,6 +35,16 @@ type JSONP struct {
 	Callback string
 }
 
+type RENDER struct {
+	Tmpl string
+	*T
+}
+
+type JUMP struct {
+	Url  string
+	Code int
+}
+
 type XML struct {
 	Data interface{}
 }
@@ -667,8 +677,14 @@ func (a *App) run(req *http.Request, w http.ResponseWriter,
 		c.ServeXml(obj.Data)
 		responseSize = c.ResponseSize
 		return
-	} else if file, ok := intf.(FILE); ok {
-		c.ServeFile(file.Data)
+	} else if obj, ok := intf.(FILE); ok {
+		c.ServeFile(obj.Data)
+		return
+	} else if obj, ok := intf.(RENDER); ok {
+		c.Render(obj.Tmpl, obj.T)
+		return
+	} else if obj, ok := intf.(JUMP); ok {
+		c.Redirect(obj.Url, obj.Code)
 		return
 	} else if err, ok := intf.(error); ok {
 		if err != nil {
