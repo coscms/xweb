@@ -753,6 +753,9 @@ func (c *Action) Assign(name string, varOrFunc interface{}) {
 
 // add names and values for template
 func (c *Action) MultiAssign(t *T) {
+	if t == nil {
+		return
+	}
 	for name, value := range *t {
 		c.Assign(name, value)
 	}
