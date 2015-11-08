@@ -56,10 +56,31 @@ type Action struct {
 	ResponseSize  int64
 	JsonpCallback string
 	ExtensionName string
+	args          []string
+	Exit          bool
 }
 
 func (c *Action) Self() interface{} {
 	return c.C.Elem().Interface()
+}
+
+func (c *Action) Arg(k int) string {
+	if len(c.args) > k {
+		return c.args[k]
+	}
+	return ""
+}
+
+func (c *Action) SetArg(k int, v string) bool {
+	r := len(c.args) > k
+	if r {
+		c.args[k] = v
+	}
+	return r
+}
+
+func (c *Action) Args() []string {
+	return c.args
 }
 
 // Protocol returns request protocol name, such as HTTP/1.1 .

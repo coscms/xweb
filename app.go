@@ -560,6 +560,11 @@ func (a *App) run(req *http.Request, w http.ResponseWriter,
 			CheckXsrf:   a.AppConfig.CheckXsrf,
 		},
 		ExtensionName: extensionName,
+		args:          make([]string, len(args)),
+	}
+
+	for k, v := range args {
+		c.args[k] = v.String()
 	}
 
 	for k, v := range a.VarMaps {
@@ -582,6 +587,11 @@ func (a *App) run(req *http.Request, w http.ResponseWriter,
 	initM := vc.MethodByName("Init")
 	if initM.IsValid() {
 		initM.Call([]reflect.Value{})
+	}
+
+	if c.Exit {
+		responseSize = c.ResponseSize
+		return
 	}
 
 	//表单数据自动映射到结构体
@@ -615,7 +625,7 @@ func (a *App) run(req *http.Request, w http.ResponseWriter,
 	initM = vc.MethodByName("Before")
 	if initM.IsValid() {
 		structAction := []reflect.Value{structName, actionName}
-		if ok := initM.Call(structAction); ok[0].Kind() == reflect.Bool && !ok[0].Bool() {
+		if ok := initM.Call(structAction); c.Exit || (len(ok) > 0 && ok[0].Kind() == reflect.Bool && !ok[0].Bool()) {
 			responseSize = c.ResponseSize
 			return
 		}
@@ -646,7 +656,7 @@ func (a *App) run(req *http.Request, w http.ResponseWriter,
 		ret = initM.Call(structAction)
 	}
 
-	if len(ret) == 0 {
+	if c.Exit || len(ret) == 0 {
 		responseSize = c.ResponseSize
 		return
 	}
@@ -797,8 +807,11 @@ func (a *App) SafelyCall(vc reflect.Value, method string, args []reflect.Value) 
 			}
 		}
 	}()
-	function := vc.MethodByName(method)
-	return function.Call(args), err
+	fn := vc.MethodByName(method)
+	if fn.Type().NumIn() > 0 {
+		return fn.Call(args), err
+	}
+	return fn.Call(nil), err
 }
 
 // Init content-length header.
