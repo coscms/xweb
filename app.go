@@ -53,6 +53,8 @@ type FILE struct {
 	Data string
 }
 
+var ExtensionValidator = make(map[string]func(*App, http.ResponseWriter, *http.Request) bool)
+
 const (
 	Debug = iota + 1
 	Product
@@ -375,18 +377,16 @@ func (app *App) AddRouter(url string, c interface{}) {
 
 		tag := t.Field(i).Tag
 		tagStr := tag.Get("xweb")
-		methods := map[string]bool{} //map[string]bool{"GET": true, "POST": true}
-		var p string
+		methods := map[string]bool{}    //map[string]bool{"GET": true, "POST": true}
+		extensions := map[string]bool{} //map[string]bool{"HTML": true, "JSON": true}
+		group := map[string]bool{}      //map[string]bool{"GET_HTML": true, "POST_JSON": true}
+		var p, meStr string
 		if tagStr != "" {
 			tags := strings.Split(tagStr, " ")
 			path := tagStr
 			length := len(tags)
 			if length >= 2 { //`xweb:"GET|POST /index"`
-				for _, method := range strings.Split(tags[0], "|") {
-					method = strings.ToUpper(method)
-					m := v.MethodByName(a + "_" + method)
-					methods[method] = m.IsValid()
-				}
+				meStr = tags[0]
 				path = tags[1]
 				if path == "" {
 					path = name
@@ -395,41 +395,63 @@ func (app *App) AddRouter(url string, c interface{}) {
 					path = "/" + actionShortName + "/" + path
 				}
 			} else if length == 1 {
-				if matched, _ := regexp.MatchString(`^[A-Z]+(\|[A-Z]+)*$`, tags[0]); !matched {
+				if matched, _ := regexp.MatchString(`^[A-Z.]+(\|[A-Z]+)*$`, tags[0]); !matched {
 					//非全大写字母时，判断为网址规则
 					path = tags[0]
 					if tags[0][0] != '/' { //`xweb:"index"`
 						path = "/" + actionShortName + "/" + path
 					}
-					m := v.MethodByName(a + "_GET")
-					methods["GET"] = m.IsValid()
-					m = v.MethodByName(a + "_POST")
-					methods["POST"] = m.IsValid()
 				} else { //`xweb:"GET|POST"`
-					for _, method := range strings.Split(tags[0], "|") {
-						method = strings.ToUpper(method)
-						m := v.MethodByName(a + "_" + method)
-						methods[method] = m.IsValid()
-					}
+					meStr = tags[0]
 					path = "/" + actionShortName + "/" + name
 				}
 			} else {
 				path = "/" + actionShortName + "/" + name
-				m := v.MethodByName(a + "_GET")
-				methods["GET"] = m.IsValid()
-				m = v.MethodByName(a + "_POST")
-				methods["POST"] = m.IsValid()
 			}
 			p = strings.TrimRight(url, "/") + path
 		} else {
 			p = strings.TrimRight(url, "/") + "/" + actionShortName + "/" + name
+		}
+		p = removeStick(p)
+
+		methodsStr := ""
+		extensionsStr := ""
+		if meStr != "" {
+			me := strings.Split(meStr, ".")
+			methodsStr = me[0]
+			if len(me) > 1 {
+				extensionsStr = me[1]
+			}
+		}
+		if methodsStr != "" {
+			for _, method := range strings.Split(methodsStr, "|") {
+				method = strings.ToUpper(method)
+				m := v.MethodByName(a + "_" + method)
+				methods[method] = m.IsValid()
+			}
+		} else {
 			m := v.MethodByName(a + "_GET")
 			methods["GET"] = m.IsValid()
 			m = v.MethodByName(a + "_POST")
 			methods["POST"] = m.IsValid()
 		}
-		p = removeStick(p)
-		app.Route.Set(p, a, methods, t)
+		if extensionsStr != "" {
+			for _, extension := range strings.Split(extensionsStr, "|") {
+				extension = strings.ToUpper(extension)
+				m := v.MethodByName(a + "_" + extension)
+				extensions[extension] = m.IsValid()
+			}
+		}
+		if len(methods) > 0 && len(extensions) > 0 {
+			for method, _ := range methods {
+				for extension, _ := range extensions {
+					key := method + "_" + extension
+					m := v.MethodByName(a + "_" + key)
+					group[key] = m.IsValid()
+				}
+			}
+		}
+		app.Route.Set(p, a, methods, extensions, group, t)
 		app.Debug("Action:", actionFullName+"."+a+";", "Route Information:", p+";", "Request Method:", methods)
 	}
 }
@@ -495,10 +517,17 @@ func (a *App) routeHandler(req *http.Request, w http.ResponseWriter) {
 		statusCode = 302
 		return
 	}
-	extension := ".html"
-	if epos := strings.LastIndex(req.URL.Path, "."); epos > 0 {
-		extension = req.URL.Path[epos:]
+	extension := "html"
+	reqExtension := "HTML"
+	if epos := strings.LastIndex(req.URL.Path, "."); epos > 0 && epos+1 < len(req.URL.Path) {
+		extension = req.URL.Path[epos+1:]
 		req.URL.Path = req.URL.Path[0:epos]
+		reqExtension = strings.ToUpper(extension)
+	}
+	if fn, ok := ExtensionValidator[extension]; ok {
+		if !fn(a, w, req) {
+			return
+		}
 	}
 
 	requestPath = req.URL.Path //支持filter更改req.URL.Path
@@ -508,14 +537,18 @@ func (a *App) routeHandler(req *http.Request, w http.ResponseWriter) {
 		reqPath = "/" + strings.TrimPrefix(reqPath, a.BasePath)
 	}
 	reqMethod := Ternary(req.Method == "HEAD", "GET", req.Method).(string)
-	args, fnName, rfType, on := a.Route.Get(reqPath, reqMethod)
+	args, fnName, rfType, onMethod, onExtension, onGroup := a.Route.Get(reqPath, reqMethod, reqExtension)
 	if rfType != nil && fnName != "" {
 		var (
 			isBreak bool
 			suffix  string
 		)
-		if on {
-			suffix = reqMethod
+		if onGroup {
+			suffix = "_" + reqMethod + "_" + reqExtension
+		} else if onMethod {
+			suffix = "_" + reqMethod
+		} else if onExtension {
+			suffix = "_" + reqExtension
 		}
 		isBreak, statusCode, responseSize = a.run(req, w, fnName, rfType, args, suffix, extension)
 		if isBreak {
@@ -545,7 +578,7 @@ func (a *App) run(req *http.Request, w http.ResponseWriter,
 	statusCode int, responseSize int64) {
 
 	if handlerSuffix != "" {
-		handlerName += "_" + handlerSuffix
+		handlerName += handlerSuffix
 	}
 	isBreak = true
 	vc := reflect.New(reflectType)
@@ -718,11 +751,11 @@ func (a *App) run(req *http.Request, w http.ResponseWriter,
 			}
 
 			switch c.ExtensionName {
-			case ".json":
+			case "json":
 				c.ServeJson(intf)
 				responseSize = c.ResponseSize
 				validType = true
-			case ".xml":
+			case "xml":
 				c.ServeXml(intf)
 				responseSize = c.ResponseSize
 				validType = true

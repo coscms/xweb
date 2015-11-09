@@ -255,9 +255,21 @@ func Url(args ...string) string {
 	if route == "" {
 		return url
 	}
-	if strings.HasSuffix(route, "/") == false {
-		url += strings.TrimLeft(route, "/") + suffix
+	if suffix != "" {
+		parts := strings.SplitN(route, "?", 2)
+		posIdx := strings.LastIndex(parts[0], "/") + 1
+		isDir := posIdx == len(parts[0])
+		if !isDir {
+			if !strings.Contains(parts[0][posIdx:], ".") {
+				if len(parts) == 2 {
+					route = parts[0] + suffix + "?" + parts[1]
+				} else {
+					route = parts[0] + suffix
+				}
+			}
+		}
 	}
+	url += strings.TrimLeft(route, "/")
 	return url
 }
 
@@ -321,9 +333,21 @@ func UrlFor(args ...string) string {
 	if s[2] == "" {
 		return url
 	}
-	if strings.HasSuffix(s[2], "/") == false {
-		url += strings.TrimLeft(s[2], "/") + suffix
+	if suffix != "" {
+		parts := strings.SplitN(s[2], "?", 2)
+		posIdx := strings.LastIndex(parts[0], "/") + 1
+		isDir := posIdx == len(parts[0])
+		if !isDir {
+			if !strings.Contains(parts[0][posIdx:], ".") {
+				if len(parts) == 2 {
+					s[2] = parts[0] + suffix + "?" + parts[1]
+				} else {
+					s[2] = parts[0] + suffix
+				}
+			}
+		}
 	}
+	url += strings.TrimLeft(s[2], "/")
 	return url
 }
 

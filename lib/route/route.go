@@ -22,6 +22,8 @@ type Route struct {
 type StaticRoute struct {
 	ReflectType   reflect.Type
 	RequestMethod map[string]bool
+	Extensions    map[string]bool
+	BothFuncs     map[string]bool
 	ExecuteFunc   string
 }
 
@@ -33,16 +35,21 @@ type RegexpRoute struct {
 	StaticPath    string
 	ReflectType   reflect.Type
 	RequestMethod map[string]bool
+	Extensions    map[string]bool
+	BothFuncs     map[string]bool
 	ExecuteFunc   string
 }
 
 func (r *Route) Set(route string, execFunc string,
-	reqMethod map[string]bool, refType reflect.Type) {
+	reqMethod map[string]bool, extensions map[string]bool,
+	group map[string]bool, refType reflect.Type) {
 	routeReg := regexp.QuoteMeta(route)
 	if route == routeReg {
 		a := &StaticRoute{
 			ReflectType:   refType,
 			RequestMethod: reqMethod,
+			Extensions:    extensions,
+			BothFuncs:     group,
 			ExecuteFunc:   execFunc,
 		}
 		r.Static[route] = a
@@ -55,18 +62,28 @@ func (r *Route) Set(route string, execFunc string,
 			StaticPath:    staticPath,
 			ReflectType:   refType,
 			RequestMethod: reqMethod,
+			Extensions:    extensions,
+			BothFuncs:     group,
 			ExecuteFunc:   execFunc,
 		}
 		r.Regexp = append(r.Regexp, a)
 	}
 }
 
-func (r *Route) Get(reqPath string, reqMethod string) ([]reflect.Value,
-	string, reflect.Type, bool) {
+func (r *Route) Get(reqPath string, reqMethod string,
+	extension string) ([]reflect.Value, string, reflect.Type, bool, bool, bool) {
 	if route, ok := r.Static[reqPath]; ok {
-		on, ok := route.RequestMethod[reqMethod]
+		onMethod, ok := route.RequestMethod[reqMethod]
 		if ok {
-			return nil, route.ExecuteFunc, route.ReflectType, on
+			onExtension, ok := route.Extensions[extension]
+			if !ok {
+				onExtension = false
+			}
+			onGroup, ok := route.BothFuncs[reqMethod+"_"+extension]
+			if !ok {
+				onGroup = false
+			}
+			return nil, route.ExecuteFunc, route.ReflectType, onMethod, onExtension, onGroup
 		}
 	}
 	length := len(reqPath)
@@ -74,7 +91,7 @@ func (r *Route) Get(reqPath string, reqMethod string) ([]reflect.Value,
 		if route.StaticLength >= length || reqPath[0:route.StaticLength] != route.StaticPath {
 			continue
 		}
-		on, ok := route.RequestMethod[reqMethod]
+		onMethod, ok := route.RequestMethod[reqMethod]
 		if !ok {
 			continue
 		}
@@ -87,9 +104,17 @@ func (r *Route) Get(reqPath string, reqMethod string) ([]reflect.Value,
 		for _, arg := range p[1:] {
 			args = append(args, reflect.ValueOf(arg))
 		}
-		return args, route.ExecuteFunc, route.ReflectType, on
+		onExtension, ok := route.Extensions[extension]
+		if !ok {
+			onExtension = false
+		}
+		onGroup, ok := route.BothFuncs[reqMethod+"_"+extension]
+		if !ok {
+			onGroup = false
+		}
+		return args, route.ExecuteFunc, route.ReflectType, onMethod, onExtension, onGroup
 	}
-	return nil, "", nil, false
+	return nil, "", nil, false, false, false
 }
 
 func (r *Route) Rego(vOriginal string, vNew string) (length int, staticPath string, regexpInstance *regexp.Regexp) {
