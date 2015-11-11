@@ -763,8 +763,8 @@ func (a *App) run(req *http.Request, w http.ResponseWriter,
 		})
 		if !validType {
 			a.Warnf("unknown returned result type %v, ignored %v", kind, intf)
-			return
 		}
+		return
 	}
 
 	w.Header().Set("Content-Length", strconv.Itoa(len(content)))
