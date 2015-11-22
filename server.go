@@ -50,6 +50,7 @@ type Server struct {
 	RootApp        *App
 	Logger         *log.Logger
 	Env            map[string]interface{}
+	Mux            *http.ServeMux
 
 	//save the listener so it can be closed
 	l net.Listener
@@ -273,8 +274,8 @@ func (s *Server) run(addr string, l net.Listener) (err error) {
 		}))
 
 	}
-
-	Event("MuxHandle", mux, func(result bool) {
+	s.Mux = mux
+	Event("MuxHandle", s, func(result bool) {
 		if result {
 			mux.Handle("/", s)
 		}
