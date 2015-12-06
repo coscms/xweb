@@ -366,7 +366,7 @@ func (n NoMatch) GetLimitValue() interface{} {
 	return n.Regexp.String()
 }
 
-var alphaDashPattern = regexp.MustCompile("[^\\d\\w-_]")
+var alphaDashPattern = regexp.MustCompile("[^\\w-]")
 
 type AlphaDash struct {
 	NoMatch

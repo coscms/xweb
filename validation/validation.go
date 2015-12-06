@@ -347,3 +347,39 @@ func (v *Validation) validExec(obj interface{}, baseName string, args ...string)
 	}
 	return
 }
+
+func (v *Validation) ValidSimple(name string, val string, rule string) (b bool, err error) {
+	err = v.validSimpleExec(val, rule, name)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	return !v.HasErrors(), nil
+}
+
+func (v *Validation) validSimpleExec(val string, rule string, fName string) (err error) {
+	var vfs []ValidFunc
+	if vfs, rule, err = getRegFuncs(rule, fName); err != nil {
+		fmt.Printf("%+v\n", err)
+		return
+	}
+	fs := strings.Split(rule, ";")
+	for _, vfunc := range fs {
+		var vf ValidFunc
+		if len(vfunc) == 0 {
+			continue
+		}
+		vf, err = parseFunc(vfunc, fName)
+		if err != nil {
+			return
+		}
+		vfs = append(vfs, vf)
+	}
+	for _, vf := range vfs {
+		if _, err = funcs.Call(vf.Name,
+			mergeParam(v, val, vf.Params)...); err != nil {
+			return
+		}
+	}
+	return
+}
