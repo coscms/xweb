@@ -101,6 +101,7 @@ func NewAppConfig() *AppConfig {
 		ReloadTemplates:   true,
 		CheckXsrf:         true,
 		FormMapToStruct:   true,
+		StaticFileParser:  make(map[string]func(string, *http.Request, http.ResponseWriter) (bool, int64)),
 	}
 }
 
@@ -123,6 +124,8 @@ type AppConfig struct {
 	FormMapToStruct   bool
 	EnableHttpCache   bool
 	AuthBasedOnCookie bool
+	StaticFileParser  map[string]func(string, *http.Request, http.ResponseWriter) (bool, int64)
+	//example: StaticFileParser[php]=func(fileName string, req *http.Request, w http.ResponseWriter)(bool, int64){...}
 }
 
 func NewApp(path string, name string) *App {
@@ -871,31 +874,39 @@ func (a *App) TryServingFile(name string, req *http.Request, w http.ResponseWrit
 	if err != nil {
 		return false, size
 	}
-	if !finfo.IsDir() {
-		size = finfo.Size()
-		isStaticFileToCompress := false
-		if a.Server.Config.EnableGzip && a.Server.Config.StaticExtensionsToGzip != nil && len(a.Server.Config.StaticExtensionsToGzip) > 0 {
-			for _, statExtension := range a.Server.Config.StaticExtensionsToGzip {
-				if strings.HasSuffix(strings.ToLower(staticFile), strings.ToLower(statExtension)) {
-					isStaticFileToCompress = true
-					break
-				}
-			}
-		}
-		if isStaticFileToCompress {
-			a.ContentEncoding = GetAcceptEncodingZip(req)
-			memzipfile, err := OpenMemZipFile(staticFile, a.ContentEncoding)
-			if err != nil {
-				return false, size
-			}
-			a.InitHeadContent(w, finfo.Size())
-			http.ServeContent(w, req, staticFile, finfo.ModTime(), memzipfile)
-		} else {
-			http.ServeFile(w, req, staticFile)
-		}
-		return true, size
+	if finfo.IsDir() {
+		return false, size
 	}
-	return false, size
+	if a.AppConfig.StaticFileParser != nil {
+		extName := filepath.Ext(staticFile)
+		if len(extName) > 0 {
+			if fn, ok := a.AppConfig.StaticFileParser[strings.ToLower(extName[1:])]; ok {
+				return fn(staticFile, req, w)
+			}
+		}
+	}
+	size = finfo.Size()
+	isStaticFileToCompress := false
+	if a.Server.Config.EnableGzip && a.Server.Config.StaticExtensionsToGzip != nil && len(a.Server.Config.StaticExtensionsToGzip) > 0 {
+		for _, statExtension := range a.Server.Config.StaticExtensionsToGzip {
+			if strings.HasSuffix(strings.ToLower(staticFile), strings.ToLower(statExtension)) {
+				isStaticFileToCompress = true
+				break
+			}
+		}
+	}
+	if isStaticFileToCompress {
+		a.ContentEncoding = GetAcceptEncodingZip(req)
+		memzipfile, err := OpenMemZipFile(staticFile, a.ContentEncoding)
+		if err != nil {
+			return false, size
+		}
+		a.InitHeadContent(w, finfo.Size())
+		http.ServeContent(w, req, staticFile, finfo.ModTime(), memzipfile)
+	} else {
+		http.ServeFile(w, req, staticFile)
+	}
+	return true, size
 }
 
 // StructMap function mapping params to controller's properties
