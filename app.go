@@ -510,6 +510,9 @@ func (a *App) routeHandler(req *http.Request, w http.ResponseWriter) {
 	ct := req.Header.Get("Content-Type")
 	if strings.Contains(ct, "multipart/form-data") {
 		req.ParseMultipartForm(a.AppConfig.MaxUploadSize)
+		if len(req.PostForm) == 0 {
+			req.PostForm = req.MultipartForm.Value
+		}
 	} else {
 		req.ParseForm()
 	}
