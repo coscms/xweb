@@ -957,8 +957,17 @@ func SplitJson(s string) ([]string, error) {
 }
 
 func (a *App) namedStructMap(m interface{}, r *http.Request, topName string) error {
-	vc := reflect.ValueOf(m).Elem()
-	tc := reflect.TypeOf(m).Elem()
+
+	vc := reflect.ValueOf(m)
+	tc := reflect.TypeOf(m)
+
+	switch tc.Kind() {
+	case reflect.Struct:
+	case reflect.Ptr:
+		vc = vc.Elem()
+		tc = tc.Elem()
+	}
+
 	for k, t := range r.Form {
 		if k == XSRF_TAG || k == "" {
 			continue
