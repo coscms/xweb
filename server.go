@@ -56,15 +56,19 @@ type Server struct {
 	l net.Listener
 }
 
-func NewServer(name string) *Server {
+func NewServer(name string, args ...*ServerConfig) *Server {
 	s := &Server{
-		Config:       Config,
 		Env:          map[string]interface{}{},
 		Apps:         map[string]*App{},
 		App2Domain:   map[string]string{},
 		Domain2App:   map[string]string{},
 		AppsNamePath: map[string]string{},
 		Name:         name,
+	}
+	if len(args) > 0 {
+		s.Config = args[0]
+	} else {
+		s.Config = Config
 	}
 	Servers[s.Name] = s
 
