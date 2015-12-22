@@ -635,7 +635,7 @@ func (a *App) run(req *http.Request, w http.ResponseWriter,
 
 	//表单数据自动映射到结构体
 	if c.Option.AutoMapForm {
-		a.StructMap(elem, req)
+		a.StructMap(vc, req)
 	}
 
 	//验证XSRF
