@@ -41,6 +41,9 @@ func (s *AutoResponse) Do(c *Action, ret []reflect.Value) error {
 }
 
 type JSONResponse struct {
+	Status  int
+	Message interface{}
+	Data    interface{}
 }
 
 func (j *JSONResponse) Do(c *Action, ret []reflect.Value) error {
@@ -49,6 +52,9 @@ func (j *JSONResponse) Do(c *Action, ret []reflect.Value) error {
 }
 
 type XMLResponse struct {
+	Status  int
+	Message interface{}
+	Data    interface{}
 }
 
 func (x *XMLResponse) Do(c *Action, ret []reflect.Value) error {

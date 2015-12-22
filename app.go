@@ -695,7 +695,12 @@ func (a *App) run(req *http.Request, w http.ResponseWriter,
 		ret = initM.Call(structAction)
 	}
 
-	if c.Exit || len(ret) == 0 {
+	if c.Exit {
+		responseSize = c.ResponseSize
+		return
+	}
+	if len(ret) == 0 {
+		defaultResponse(c, nil)
 		responseSize = c.ResponseSize
 		return
 	}
@@ -755,17 +760,7 @@ func (a *App) run(req *http.Request, w http.ResponseWriter,
 				validType = true
 				return
 			}
-
-			switch c.ExtensionName {
-			case "json":
-				c.ServeJson(intf)
-				responseSize = c.ResponseSize
-				validType = true
-			case "xml":
-				c.ServeXml(intf)
-				responseSize = c.ResponseSize
-				validType = true
-			}
+			responseSize, validType = defaultResponse(c, intf)
 		})
 		if !validType {
 			a.Warnf("unknown returned result type %v, ignored %v", kind, intf)
@@ -781,6 +776,26 @@ func (a *App) run(req *http.Request, w http.ResponseWriter,
 		return
 	}
 	responseSize = int64(size)
+	return
+}
+
+func defaultResponse(c *Action, data interface{}) (responseSize int64, validType bool) {
+	switch c.ExtensionName {
+	case "json":
+		if data == nil {
+			data = JSONResponse{Status: 1, Message: "", Data: c.T}
+		}
+		c.ServeJson(data)
+		responseSize = c.ResponseSize
+		validType = true
+	case "xml":
+		if data == nil {
+			data = XMLResponse{Status: 1, Message: "", Data: c.T}
+		}
+		c.ServeXml(data)
+		responseSize = c.ResponseSize
+		validType = true
+	}
 	return
 }
 
