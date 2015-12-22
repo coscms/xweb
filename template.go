@@ -43,6 +43,7 @@ var (
 		"XsrfField":   XsrfName, //alias
 		"HtmlAttr":    HtmlAttr,
 		"ToHtmlAttrs": ToHtmlAttrs,
+		"BuildUrl":    BuildUrl,
 	}
 	DefaultTemplateMgr *TemplateMgr = new(TemplateMgr)
 )
@@ -218,6 +219,10 @@ func Url(args ...string) string {
 		appName = args[1]
 		servName = args[2]
 	}
+	return BuildUrl(route, appName, servName, size)
+}
+
+func BuildUrl(route, appName, servName string, size int) string {
 	var appUrl, url, prefix, suffix string
 	if server, ok := Servers[servName]; ok {
 		prefix = server.Config.UrlPrefix
@@ -284,7 +289,6 @@ func UrlFor(args ...string) string {
 	} else {
 		u = []string{""}
 	}
-	var appUrl string = ""
 	switch len(u) {
 	case 1:
 		s[2] = u[0]
@@ -296,59 +300,7 @@ func UrlFor(args ...string) string {
 		s[1] = u[1]
 		s[2] = u[2]
 	}
-	var url, prefix, suffix string
-	if server, ok := Servers[s[0]]; ok {
-		prefix = server.Config.UrlPrefix
-		suffix = server.Config.UrlSuffix
-		var appDomain string
-		if domain, ok := server.App2Domain[s[1]]; ok {
-			appUrl = "/"
-			appDomain = domain
-		} else if appPath, ok := server.AppsNamePath[s[1]]; ok {
-			appUrl = appPath
-		}
-		if appDomain != "" {
-			if strings.Contains(appDomain, "//") {
-				url = appDomain
-			} else {
-				url = "http://" + appDomain
-			}
-		} else {
-			url = server.Config.Url
-		}
-	}
-	url = strings.TrimRight(url, "/") + "/"
-	if size == 0 {
-		return url
-	}
-	if appUrl != "/" {
-		appUrl = strings.TrimLeft(appUrl, "/")
-		if length := len(appUrl); length > 0 && appUrl[length-1] != '/' {
-			appUrl = appUrl + "/"
-		}
-	} else {
-		appUrl = ""
-	}
-	url += prefix + appUrl
-	if s[2] == "" {
-		return url
-	}
-	if suffix != "" {
-		parts := strings.SplitN(s[2], "?", 2)
-		posIdx := strings.LastIndex(parts[0], "/") + 1
-		isDir := posIdx == len(parts[0])
-		if !isDir {
-			if !strings.Contains(parts[0][posIdx:], ".") {
-				if len(parts) == 2 {
-					s[2] = parts[0] + suffix + "?" + parts[1]
-				} else {
-					s[2] = parts[0] + suffix
-				}
-			}
-		}
-	}
-	url += strings.TrimLeft(s[2], "/")
-	return url
+	return BuildUrl(s[2], s[1], s[0], size)
 }
 
 type TemplateMgr struct {
