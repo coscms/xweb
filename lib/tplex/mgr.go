@@ -13,17 +13,18 @@ import (
 )
 
 type TemplateMgr struct {
-	Caches        map[string][]byte
-	mutex         *sync.Mutex
-	RootDir       string
-	NewRoorDir    string
-	Ignores       map[string]bool
-	IsReload      bool
-	Logger        *log.Logger
-	Preprocessor  func([]byte) []byte
-	timerCallback func() bool
-	TimerCallback func() bool
-	initialized   bool
+	Caches           map[string][]byte
+	mutex            *sync.Mutex
+	RootDir          string
+	NewRoorDir       string
+	Ignores          map[string]bool
+	IsReload         bool
+	Logger           *log.Logger
+	Preprocessor     func([]byte) []byte
+	timerCallback    func() bool
+	TimerCallback    func() bool
+	initialized      bool
+	OnChangeCallback func(string, string, string) //参数为：目标名称，类型(file/dir)，事件名(create/delete/modify/rename)
 }
 
 func (self *TemplateMgr) Moniter(rootDir string) error {
@@ -52,6 +53,7 @@ func (self *TemplateMgr) Moniter(rootDir string) error {
 				if ev.IsCreate() {
 					if d.IsDir() {
 						watcher.Watch(ev.Name)
+						self.OnChange(ev.Name, "dir", "create")
 					} else {
 						tmpl := ev.Name[len(self.RootDir)+1:]
 						content, err := ioutil.ReadFile(ev.Name)
@@ -61,16 +63,20 @@ func (self *TemplateMgr) Moniter(rootDir string) error {
 						}
 						self.Logger.Infof("loaded template file %v success", tmpl)
 						self.CacheTemplate(tmpl, content)
+						self.OnChange(ev.Name, "file", "create")
 					}
 				} else if ev.IsDelete() {
 					if d.IsDir() {
 						watcher.RemoveWatch(ev.Name)
+						self.OnChange(ev.Name, "dir", "delete")
 					} else {
 						tmpl := ev.Name[len(self.RootDir)+1:]
 						self.CacheDelete(tmpl)
+						self.OnChange(ev.Name, "file", "delete")
 					}
 				} else if ev.IsModify() {
 					if d.IsDir() {
+						self.OnChange(ev.Name, "dir", "modify")
 					} else {
 						tmpl := ev.Name[len(self.RootDir)+1:]
 						content, err := ioutil.ReadFile(ev.Name)
@@ -81,13 +87,16 @@ func (self *TemplateMgr) Moniter(rootDir string) error {
 
 						self.CacheTemplate(tmpl, content)
 						self.Logger.Infof("reloaded template %v success", tmpl)
+						self.OnChange(ev.Name, "file", "modify")
 					}
 				} else if ev.IsRename() {
 					if d.IsDir() {
 						watcher.RemoveWatch(ev.Name)
+						self.OnChange(ev.Name, "dir", "rename")
 					} else {
 						tmpl := ev.Name[len(self.RootDir)+1:]
 						self.CacheDelete(tmpl)
+						self.OnChange(ev.Name, "file", "rename")
 					}
 				}
 			case err := <-watcher.Error:
@@ -119,6 +128,14 @@ func (self *TemplateMgr) Moniter(rootDir string) error {
 	<-done
 	//fmt.Println("[xweb] TemplateMgr watcher is closed.")
 	return nil
+}
+
+func (self *TemplateMgr) OnChange(name, typ, event string) {
+	if self.OnChangeCallback != nil {
+		self.mutex.Lock()
+		defer self.mutex.Unlock()
+		self.OnChangeCallback(name, typ, event)
+	}
 }
 
 func (self *TemplateMgr) CacheAll(rootDir string) error {

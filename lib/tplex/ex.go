@@ -19,8 +19,8 @@ import (
 	"github.com/coscms/xweb/log"
 )
 
-func New(logger *log.Logger, templateDir string, cached ...bool) *TempateEx {
-	t := &TempateEx{
+func New(logger *log.Logger, templateDir string, cached ...bool) *TemplateEx {
+	t := &TemplateEx{
 		CachedTemplate: make(map[string]*htmlTpl.Template),
 		CachedRelation: make(map[string]string),
 		TemplateDir:    templateDir,
@@ -35,12 +35,30 @@ func New(logger *log.Logger, templateDir string, cached ...bool) *TempateEx {
 		if mgrCtlLen > 1 {
 			reloadTemplates = cached[1]
 		}
+		t.TemplateMgr.OnChangeCallback = func(name, typ, event string) {
+			switch event {
+			case "create":
+			case "delete", "modify", "rename":
+				if typ == "dir" {
+					return
+				}
+				if key, ok := t.CachedRelation[name]; ok {
+					if _, ok := t.CachedTemplate[key]; ok {
+						delete(t.CachedTemplate, key)
+					}
+					delete(t.CachedRelation, name)
+				}
+				if _, ok := t.CachedTemplate[name]; ok {
+					delete(t.CachedTemplate, name)
+				}
+			}
+		}
 		t.TemplateMgr.Init(logger, templateDir, reloadTemplates)
 	}
 	return t
 }
 
-type TempateEx struct {
+type TemplateEx struct {
 	CachedTemplate   map[string]*htmlTpl.Template
 	CachedRelation   map[string]string
 	TemplateDir      string
@@ -53,7 +71,7 @@ type TempateEx struct {
 	IncludeTag       string
 }
 
-func (self *TempateEx) Fetch(tmplName string, funcMap htmlTpl.FuncMap, values interface{}) interface{} {
+func (self *TemplateEx) Fetch(tmplName string, funcMap htmlTpl.FuncMap, values interface{}) interface{} {
 	tmpl, ok := self.CachedTemplate[tmplName]
 	if !ok {
 		b, err := self.RawContent(tmplName)
@@ -108,7 +126,7 @@ func (self *TempateEx) Fetch(tmplName string, funcMap htmlTpl.FuncMap, values in
 	return self.Parse(tmpl, values)
 }
 
-func (self *TempateEx) ContainsSubTpl(content string, subcs *[]string, subfs *[]string) string {
+func (self *TemplateEx) ContainsSubTpl(content string, subcs *[]string, subfs *[]string) string {
 	matches := self.incTagRegex.FindAllStringSubmatch(content, -1)
 	//dump(matches)
 	for _, v := range matches {
@@ -132,12 +150,12 @@ func (self *TempateEx) ContainsSubTpl(content string, subcs *[]string, subfs *[]
 	return content
 }
 
-func (self *TempateEx) Tag(content string) string {
+func (self *TemplateEx) Tag(content string) string {
 	return self.DelimLeft + content + self.DelimRight
 }
 
 // Include method provide to template for {{include "xx.tmpl"}}
-func (self *TempateEx) Include(tmplName string, funcMap htmlTpl.FuncMap, values interface{}) interface{} {
+func (self *TemplateEx) Include(tmplName string, funcMap htmlTpl.FuncMap, values interface{}) interface{} {
 	tmpl, ok := self.CachedTemplate[tmplName]
 	if !ok {
 		b, err := self.RawContent(tmplName)
@@ -164,7 +182,7 @@ func (self *TempateEx) Include(tmplName string, funcMap htmlTpl.FuncMap, values 
 	return self.Parse(tmpl, values)
 }
 
-func (self *TempateEx) Parse(tmpl *htmlTpl.Template, values interface{}) interface{} {
+func (self *TemplateEx) Parse(tmpl *htmlTpl.Template, values interface{}) interface{} {
 	newbytes := bytes.NewBufferString("")
 	err := tmpl.Execute(newbytes, values)
 	if err != nil {
@@ -178,7 +196,7 @@ func (self *TempateEx) Parse(tmpl *htmlTpl.Template, values interface{}) interfa
 	return htmlTpl.HTML(string(b))
 }
 
-func (self *TempateEx) RawContent(tmpl string) ([]byte, error) {
+func (self *TemplateEx) RawContent(tmpl string) ([]byte, error) {
 	if self.TemplateMgr != nil && self.TemplateMgr.Caches != nil {
 		return self.TemplateMgr.GetTemplate(tmpl)
 	}
