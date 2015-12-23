@@ -41,15 +41,16 @@ func New(logger *log.Logger, templateDir string, cached ...bool) *TempateEx {
 }
 
 type TempateEx struct {
-	CachedTemplate map[string]*htmlTpl.Template
-	CachedRelation map[string]string
-	TemplateDir    string
-	TemplateMgr    *TemplateMgr
-	BeforeRender   func(*string)
-	DelimLeft      string
-	DelimRight     string
-	incTagRegex    *regexp.Regexp
-	IncludeTag     string
+	CachedTemplate   map[string]*htmlTpl.Template
+	CachedRelation   map[string]string
+	TemplateDir      string
+	TemplateMgr      *TemplateMgr
+	BeforeRender     func(*string)
+	DelimLeft        string
+	DelimRight       string
+	incTagRegex      *regexp.Regexp
+	cachedRegexIdent string
+	IncludeTag       string
 }
 
 func (self *TempateEx) Fetch(tmplName string, funcMap htmlTpl.FuncMap, values interface{}) interface{} {
@@ -66,6 +67,12 @@ func (self *TempateEx) Fetch(tmplName string, funcMap htmlTpl.FuncMap, values in
 		}
 		subcs := make([]string, 0) //子模板内容
 		subfs := make([]string, 0) //子模板文件名
+
+		ident := self.DelimLeft + self.IncludeTag + self.DelimRight
+		if self.cachedRegexIdent != ident || self.incTagRegex == nil {
+			self.incTagRegex = regexp.MustCompile(regexp.QuoteMeta(self.DelimLeft) + self.IncludeTag + `[\s]+"([^"]+)"(?:[\s]+([` + regexp.QuoteMeta(self.DelimRight[0:1]) + `]+))?[\s]*` + regexp.QuoteMeta(self.DelimRight))
+		}
+
 		content = self.ContainsSubTpl(content, &subcs, &subfs)
 		//fmt.Println("====>", content)
 		t := htmlTpl.New(tmplName)
@@ -78,6 +85,7 @@ func (self *TempateEx) Fetch(tmplName string, funcMap htmlTpl.FuncMap, values in
 		}
 		for k, subc := range subcs {
 			name := subfs[k]
+			self.CachedRelation[name] = tmplName
 			var t *htmlTpl.Template
 			if tmpl == nil {
 				tmpl = htmlTpl.New(name)
@@ -101,7 +109,6 @@ func (self *TempateEx) Fetch(tmplName string, funcMap htmlTpl.FuncMap, values in
 }
 
 func (self *TempateEx) ContainsSubTpl(content string, subcs *[]string, subfs *[]string) string {
-	self.incTagRegex = regexp.MustCompile(regexp.QuoteMeta(self.DelimLeft) + self.IncludeTag + `[\s]+"([^"]+)"(?:[\s]+([` + regexp.QuoteMeta(self.DelimRight[0:1]) + `]+))?[\s]*` + regexp.QuoteMeta(self.DelimRight))
 	matches := self.incTagRegex.FindAllStringSubmatch(content, -1)
 	//dump(matches)
 	for _, v := range matches {
