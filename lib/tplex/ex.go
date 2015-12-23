@@ -25,6 +25,7 @@ func New(logger *log.Logger, templateDir string, cached ...bool) *TemplateEx {
 		DelimLeft:      "{{",
 		DelimRight:     "}}",
 		IncludeTag:     "Include",
+		Ext:            ".html",
 	}
 	mgrCtlLen := len(cached)
 	if mgrCtlLen > 0 && cached[0] {
@@ -66,9 +67,11 @@ type TemplateEx struct {
 	incTagRegex      *regexp.Regexp
 	cachedRegexIdent string
 	IncludeTag       string
+	Ext              string
 }
 
 func (self *TemplateEx) Fetch(tmplName string, funcMap htmlTpl.FuncMap, values interface{}) interface{} {
+	tmplName += self.Ext
 	tmpl, ok := self.CachedTemplate[tmplName]
 	if !ok {
 		b, err := self.RawContent(tmplName)
@@ -133,6 +136,7 @@ func (self *TemplateEx) ContainsSubTpl(content string, subcs *[]string, subfs *[
 		matched := v[0]
 		tmplFile := v[1]
 		passObject := v[2]
+		tmplFile += self.Ext
 		b, err := self.RawContent(tmplFile)
 		if err != nil {
 			return fmt.Sprintf("RenderTemplate %v read err: %s", tmplFile, err)

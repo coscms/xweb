@@ -14,8 +14,9 @@ func main() {
 	for i := 0; i < 5; i++ {
 		ts := time.Now()
 		fmt.Printf("==========%v: %v========\\\n", i, ts)
-		str := tpl.Fetch("test.html", nil, map[string]string{
-			"test": "one->" + fmt.Sprintf("%v", i),
+		str := tpl.Fetch("test", nil, map[string]interface{}{
+			"test": "one---" + fmt.Sprintf("%v", i),
+			"r":    []string{"one", "two", "three"},
 		})
 		fmt.Printf("%v\n", str)
 		fmt.Printf("==========cost: %v========/\n", time.Now().Sub(ts).Seconds())
