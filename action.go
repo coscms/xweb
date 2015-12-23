@@ -6,7 +6,6 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"encoding/xml"
-	"errors"
 	"fmt"
 	"html/template"
 	"io"
@@ -614,45 +613,10 @@ type ActionInformation struct {
 
 // Include method provide to template for {{include "xx.tmpl"}}
 func (c *Action) Include(tmplName string) interface{} {
-	t := c.RootTemplate.New(tmplName)
-	t.Funcs(c.GetFuncs())
-
-	content, err := c.getTemplate(tmplName)
-	if err != nil {
-		errMsg := fmt.Sprintf("RenderTemplate %v read err: %s", tmplName, err)
-		c.Error(errMsg)
-		return errMsg
-	}
-
-	constr := string(content)
-
-	Event("BeforeRender", &ActionInformation{c, &constr, nil}, func(_ bool) {})
-
-	tmpl, err := t.Parse(constr)
-	if err != nil {
-		errMsg := fmt.Sprintf("Parse %v err: %v", tmplName, err)
-		c.Error(errMsg)
-		return errMsg
-	}
-	newbytes := bytes.NewBufferString("")
-	err = tmpl.Execute(newbytes, c.C.Elem().Interface())
-	if err != nil {
-		errMsg := fmt.Sprintf("Parse %v err: %v", tmplName, err)
-		c.Error(errMsg)
-		return errMsg
-	}
-
-	tplcontent, err := ioutil.ReadAll(newbytes)
-	if err != nil {
-		errMsg := fmt.Sprintf("Parse %v err: %v", tmplName, err)
-		c.Error(errMsg)
-		return errMsg
-	}
-	return template.HTML(string(tplcontent))
+	return c.App.TemplateEx.Include(tmplName, c.GetFuncs(), c.C.Elem().Interface())
 }
 
-// render the template with vars map, you can have zero or one map
-func (c *Action) NamedRender(name, content string, params ...*T) error {
+func (c *Action) setTemplateData(params ...*T) {
 	c.f["include"] = c.Include
 	if c.App.AppConfig.SessionOn {
 		c.f["session"] = c.GetSession
@@ -667,7 +631,11 @@ func (c *Action) NamedRender(name, content string, params ...*T) error {
 	if len(params) > 0 {
 		c.MultiAssign(params[0])
 	}
+}
 
+// render the template with vars map, you can have zero or one map
+func (c *Action) NamedRender(name, content string, params ...*T) error {
+	c.setTemplateData(params...)
 	c.RootTemplate = template.New(name)
 	c.RootTemplate.Funcs(c.GetFuncs())
 
@@ -684,41 +652,34 @@ func (c *Action) NamedRender(name, content string, params ...*T) error {
 		c.SetBody([]byte(fmt.Sprintf("%v", err)))
 		return err
 	}
-	tplcontent, err := ioutil.ReadAll(newbytes)
+	b, err := ioutil.ReadAll(newbytes)
 	if err != nil {
 		c.SetBody([]byte(fmt.Sprintf("%v", err)))
 		return err
 	}
-	Event("AfterRender", &ActionInformation{c, nil, &tplcontent}, func(result bool) {
+	Event("AfterRender", &ActionInformation{c, nil, &b}, func(result bool) {
 		if result {
-			err = c.SetBody(tplcontent)
+			err = c.SetBody(b)
 		}
 	})
 	return err
 }
 
 func (c *Action) getTemplate(tmpl string) ([]byte, error) {
-	if c.App.AppConfig.CacheTemplates {
-		return c.App.TemplateMgr.GetTemplate(tmpl)
-	}
-	path := c.App.getTemplatePath(tmpl)
-	if path == "" {
-		return nil, errors.New(fmt.Sprintf("No template file %v found", path))
-	}
-
-	return ioutil.ReadFile(path)
+	return c.App.TemplateEx.RawContent(tmpl)
 }
 
 // render the template with vars map, you can have zero or one map
-func (c *Action) Render(tmpl string, params ...*T) error {
-	content, err := c.getTemplate(tmpl)
-	if err == nil {
-		err = c.NamedRender(tmpl, string(content), params...)
-	}
-	if err != nil {
-		c.SetBody([]byte(fmt.Sprintf("%v", err)))
-	}
-	return err
+func (c *Action) Render(tmpl string, params ...*T) (err error) {
+	c.setTemplateData(params...)
+	content := c.App.TemplateEx.Fetch(tmpl, c.GetFuncs(), c.C.Elem().Interface())
+	b := []byte(content)
+	Event("AfterRender", &ActionInformation{c, nil, &b}, func(result bool) {
+		if result {
+			err = c.SetBody(b)
+		}
+	})
+	return
 }
 
 func (c *Action) GetFuncs() template.FuncMap {

@@ -19,6 +19,7 @@ import (
 	"github.com/coscms/tagfast"
 	"github.com/coscms/xweb/httpsession"
 	"github.com/coscms/xweb/lib/route"
+	"github.com/coscms/xweb/lib/tplex"
 	"github.com/coscms/xweb/log"
 )
 
@@ -81,7 +82,7 @@ type App struct {
 	RootTemplate       *template.Template
 	ErrorTemplate      *template.Template
 	StaticVerMgr       *StaticVerMgr
-	TemplateMgr        *TemplateMgr
+	TemplateEx         *tplex.TemplateEx
 	ContentEncoding    string
 	RequestTime        time.Time
 	Cryptor
@@ -143,7 +144,6 @@ func NewApp(path string, name string) *App {
 		VarMaps:            T{},
 		filters:            make([]Filter, 0),
 		StaticVerMgr:       DefaultStaticVerMgr,
-		TemplateMgr:        DefaultTemplateMgr,
 		Cryptor:            DefaultCryptor,
 		XsrfManager:        DefaultXsrfManager,
 	}
@@ -165,15 +165,10 @@ func (a *App) initApp() {
 			a.StaticVerMgr = a.Server.RootApp.StaticVerMgr
 		}
 	}
-	if a.AppConfig.CacheTemplates {
-		if isRootApp || a.Server.RootApp.AppConfig.TemplateDir != a.AppConfig.TemplateDir {
-			if !isRootApp {
-				a.TemplateMgr = new(TemplateMgr)
-			}
-			a.TemplateMgr.Init(a, a.AppConfig.TemplateDir, a.AppConfig.ReloadTemplates)
-		} else {
-			a.TemplateMgr = a.Server.RootApp.TemplateMgr
-		}
+	if isRootApp || a.Server.RootApp.AppConfig.TemplateDir != a.AppConfig.TemplateDir {
+		a.TemplateEx = tplex.New(a.Logger, a.AppConfig.TemplateDir, a.AppConfig.CacheTemplates, a.AppConfig.ReloadTemplates)
+	} else {
+		a.TemplateEx = a.Server.RootApp.TemplateEx
 	}
 	a.FuncMaps["StaticUrl"] = a.StaticUrl
 	a.FuncMaps["XsrfName"] = XsrfName
@@ -200,8 +195,8 @@ func (a *App) Close() {
 	if a.AppConfig.StaticFileVersion && a.StaticVerMgr != nil {
 		a.StaticVerMgr.Close()
 	}
-	if a.AppConfig.CacheTemplates && a.TemplateMgr != nil {
-		a.TemplateMgr.Close()
+	if a.AppConfig.CacheTemplates && a.TemplateEx != nil && a.TemplateEx.TemplateMgr != nil {
+		a.TemplateEx.TemplateMgr.Close()
 	}
 	if a.AppConfig.SessionOn && a.Server.SessionManager == nil &&
 		a.SessionManager != nil {

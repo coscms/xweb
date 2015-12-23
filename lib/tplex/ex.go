@@ -70,7 +70,7 @@ type TemplateEx struct {
 	Ext              string
 }
 
-func (self *TemplateEx) Fetch(tmplName string, funcMap htmlTpl.FuncMap, values interface{}) interface{} {
+func (self *TemplateEx) Fetch(tmplName string, funcMap htmlTpl.FuncMap, values interface{}) string {
 	tmplName += self.Ext
 	tmpl, ok := self.CachedTemplate[tmplName]
 	if !ok {
@@ -183,10 +183,10 @@ func (self *TemplateEx) Include(tmplName string, funcMap htmlTpl.FuncMap, values
 		self.CachedTemplate[tmplName] = tmpl
 		self.CachedRelation[tmplName] = tmplName
 	}
-	return self.Parse(tmpl, values)
+	return htmlTpl.HTML(self.Parse(tmpl, values))
 }
 
-func (self *TemplateEx) Parse(tmpl *htmlTpl.Template, values interface{}) interface{} {
+func (self *TemplateEx) Parse(tmpl *htmlTpl.Template, values interface{}) string {
 	newbytes := bytes.NewBufferString("")
 	err := tmpl.Execute(newbytes, values)
 	if err != nil {
@@ -197,7 +197,7 @@ func (self *TemplateEx) Parse(tmpl *htmlTpl.Template, values interface{}) interf
 	if err != nil {
 		return fmt.Sprintf("Parse %v err: %v", tmpl.Name(), err)
 	}
-	return htmlTpl.HTML(string(b))
+	return string(b)
 }
 
 func (self *TemplateEx) RawContent(tmpl string) ([]byte, error) {

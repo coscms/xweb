@@ -23,7 +23,7 @@ func hello3() string {
 }
 
 func (this *MainAction) Home() error {
-	return this.Render("home.html", &xweb.T{
+	return this.Render("home", &xweb.T{
 		"title":  "模版测试例子",
 		"body":   "模版具体内容",
 		"footer": "版权所有",
