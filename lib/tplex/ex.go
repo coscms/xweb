@@ -44,13 +44,13 @@ func New(logger *log.Logger, templateDir string, cached ...bool) *TemplateEx {
 				}
 				if key, ok := t.CachedRelation[name]; ok {
 					if _, ok := t.CachedTemplate[key]; ok {
-						logger.Infof("delete template parsed cache %v success", key)
+						logger.Infof("remove cached template object: %v", key)
 						delete(t.CachedTemplate, key)
 					}
 					delete(t.CachedRelation, name)
 				}
 				if _, ok := t.CachedTemplate[name]; ok {
-					logger.Infof("delete template parsed cache %v success", name)
+					logger.Infof("remove cached template object: %v", name)
 					delete(t.CachedTemplate, name)
 				}
 			}
