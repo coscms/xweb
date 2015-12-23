@@ -70,7 +70,7 @@ func (self *TempateEx) Fetch(tmplName string, funcMap htmlTpl.FuncMap, values in
 
 		ident := self.DelimLeft + self.IncludeTag + self.DelimRight
 		if self.cachedRegexIdent != ident || self.incTagRegex == nil {
-			self.incTagRegex = regexp.MustCompile(regexp.QuoteMeta(self.DelimLeft) + self.IncludeTag + `[\s]+"([^"]+)"(?:[\s]+([` + regexp.QuoteMeta(self.DelimRight[0:1]) + `]+))?[\s]*` + regexp.QuoteMeta(self.DelimRight))
+			self.incTagRegex = regexp.MustCompile(regexp.QuoteMeta(self.DelimLeft) + self.IncludeTag + `[\s]+"([^"]+)"(?:[\s]+([^` + regexp.QuoteMeta(self.DelimRight[0:1]) + `]+))?[\s]*` + regexp.QuoteMeta(self.DelimRight))
 		}
 
 		content = self.ContainsSubTpl(content, &subcs, &subfs)
