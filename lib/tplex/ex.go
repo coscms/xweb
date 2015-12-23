@@ -83,15 +83,14 @@ func (self *TemplateEx) Fetch(tmplName string, funcMap htmlTpl.FuncMap, values i
 		if self.BeforeRender != nil {
 			self.BeforeRender(&content)
 		}
-		subcs := make([]string, 0) //子模板内容
-		subfs := make([]string, 0) //子模板文件名
+		subcs := make(map[string]string, 0) //子模板内容
 
 		ident := self.DelimLeft + self.IncludeTag + self.DelimRight
 		if self.cachedRegexIdent != ident || self.incTagRegex == nil {
 			self.incTagRegex = regexp.MustCompile(regexp.QuoteMeta(self.DelimLeft) + self.IncludeTag + `[\s]+"([^"]+)"(?:[\s]+([^` + regexp.QuoteMeta(self.DelimRight[0:1]) + `]+))?[\s]*` + regexp.QuoteMeta(self.DelimRight))
 		}
 
-		content = self.ContainsSubTpl(content, &subcs, &subfs)
+		content = self.ContainsSubTpl(content, &subcs)
 		//fmt.Println("====>", content)
 		t := htmlTpl.New(tmplName)
 		t.Delims(self.DelimLeft, self.DelimRight)
@@ -101,8 +100,7 @@ func (self *TemplateEx) Fetch(tmplName string, funcMap htmlTpl.FuncMap, values i
 		if err != nil {
 			return fmt.Sprintf("Parse %v err: %v", tmplName, err)
 		}
-		for k, subc := range subcs {
-			name := subfs[k]
+		for name, subc := range subcs {
 			self.CachedRelation[name] = tmplName
 			var t *htmlTpl.Template
 			if tmpl == nil {
@@ -129,7 +127,7 @@ func (self *TemplateEx) Fetch(tmplName string, funcMap htmlTpl.FuncMap, values i
 	return self.Parse(tmpl, values)
 }
 
-func (self *TemplateEx) ContainsSubTpl(content string, subcs *[]string, subfs *[]string) string {
+func (self *TemplateEx) ContainsSubTpl(content string, subcs *map[string]string) string {
 	matches := self.incTagRegex.FindAllStringSubmatch(content, -1)
 	//dump(matches)
 	for _, v := range matches {
@@ -137,15 +135,16 @@ func (self *TemplateEx) ContainsSubTpl(content string, subcs *[]string, subfs *[
 		tmplFile := v[1]
 		passObject := v[2]
 		tmplFile += self.Ext
-		b, err := self.RawContent(tmplFile)
-		if err != nil {
-			return fmt.Sprintf("RenderTemplate %v read err: %s", tmplFile, err)
+		if _, ok := (*subcs)[tmplFile]; !ok {
+			b, err := self.RawContent(tmplFile)
+			if err != nil {
+				return fmt.Sprintf("RenderTemplate %v read err: %s", tmplFile, err)
+			}
+			str := string(b)
+			str = self.ContainsSubTpl(str, subcs)
+			sub := self.Tag(`define "`+tmplFile+`"`) + str + self.Tag(`end`)
+			(*subcs)[tmplFile] = sub
 		}
-		str := string(b)
-		str = self.ContainsSubTpl(str, subcs, subfs)
-		sub := self.Tag(`define "`+tmplFile+`"`) + str + self.Tag(`end`)
-		*subcs = append(*subcs, sub)
-		*subfs = append(*subfs, tmplFile)
 		if passObject == "" {
 			passObject = "."
 		}
