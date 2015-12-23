@@ -115,6 +115,9 @@ func (self *TemplateEx) Fetch(tmplName string, funcMap htmlTpl.FuncMap, values i
 			} else {
 				t = tmpl.New(name)
 			}
+			if self.BeforeRender != nil {
+				self.BeforeRender(&subc)
+			}
 			_, err = t.Parse(subc)
 			if err != nil {
 				return fmt.Sprintf("Parse %v err: %v", name, err)
