@@ -1,10 +1,16 @@
 package tplex
 
 import (
+	"bytes"
+	"encoding/json"
+	"fmt"
 	htmlTpl "html/template"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
+	"strings"
 
 	"github.com/coscms/xweb/log"
 )
@@ -12,6 +18,7 @@ import (
 func New(logger *log.Logger, templateDir string, cached ...bool) *TempateEx {
 	t := &TempateEx{
 		CachedTemplate: make(map[string]*htmlTpl.Template),
+		CachedRelation: make(map[string]string),
 		TemplateDir:    templateDir,
 		TemplateMgr:    new(TemplateMgr),
 		DelimLeft:      "{{",
@@ -52,7 +59,7 @@ func (self *TempateEx) Fetch(tmplName string, funcMap htmlTpl.FuncMap, values in
 			self.BeforeRender(&content)
 		}
 
-		content = self.SubTpl(content) + content
+		content = self.ContainsSubTpl(content)
 
 		t := htmlTpl.New(tmplName)
 		t.Delims(self.DelimLeft, self.DelimRight)
@@ -68,21 +75,28 @@ func (self *TempateEx) Fetch(tmplName string, funcMap htmlTpl.FuncMap, values in
 	return self.Parse(tmpl, values)
 }
 
-func (self *TempateEx) SubTpl(content string) string {
+func (self *TempateEx) ContainsSubTpl(content string) string {
 	self.incTagRegex = regexp.MustCompile(regexp.QuoteMeta(self.DelimLeft) + `Include "([^"]+)"` + regexp.QuoteMeta(self.DelimRight))
-	tmplFiles := self.incTagRegex.FindAllString(content, -1)
+	matches := self.incTagRegex.FindAllStringSubmatch(content, -1)
+	c, _ := json.MarshalIndent(matches, "", " ")
+	fmt.Println(string(c))
 	subContent := ""
-	for k, tmplFile := range tmplFiles {
+	for _, v := range matches {
+		tmplFile := v[1]
 		b, err := self.RawContent(tmplFile)
 		if err != nil {
 			return fmt.Sprintf("RenderTemplate %v read err: %s", tmplFile, err)
 		}
 		str := string(b)
-		subContent += self.SubTpl(str)
-		subContent += str
+		subContent += self.Tag(`define "`+tmplFile+`"`) + self.ContainsSubTpl(str) + self.Tag(`end`)
+		content = strings.Replace(content, v[0], self.Tag(`template "`+tmplFile+`"`), -1)
 	}
+	content = subContent + content
+	return content
+}
 
-	return subContent
+func (self *TempateEx) Tag(content string) string {
+	return self.DelimLeft + content + self.DelimRight
 }
 
 // Include method provide to template for {{include "xx.tmpl"}}
@@ -117,14 +131,14 @@ func (self *TempateEx) Parse(tmpl *htmlTpl.Template, values interface{}) interfa
 	newbytes := bytes.NewBufferString("")
 	err := tmpl.Execute(newbytes, values)
 	if err != nil {
-		return fmt.Sprintf("Parse %v err: %v", tmplName, err)
+		return fmt.Sprintf("Parse %v err: %v", tmpl.Name(), err)
 	}
 
 	b, err := ioutil.ReadAll(newbytes)
 	if err != nil {
-		return fmt.Sprintf("Parse %v err: %v", tmplName, err)
+		return fmt.Sprintf("Parse %v err: %v", tmpl.Name(), err)
 	}
-	return template.HTML(string(b))
+	return htmlTpl.HTML(string(b))
 }
 
 func (self *TempateEx) RawContent(tmpl string) ([]byte, error) {
@@ -132,4 +146,32 @@ func (self *TempateEx) RawContent(tmpl string) ([]byte, error) {
 		return self.TemplateMgr.GetTemplate(tmpl)
 	}
 	return ioutil.ReadFile(filepath.Join(self.TemplateDir, tmpl))
+}
+
+func dirExists(dir string) bool {
+	d, e := os.Stat(dir)
+	switch {
+	case e != nil:
+		return false
+	case !d.IsDir():
+		return false
+	}
+
+	return true
+}
+
+func FixDirSeparator(dir string) string {
+	if runtime.GOOS == "windows" {
+		return strings.Replace(dir, "\\", "/", -1)
+	}
+	return dir
+}
+
+func fileExists(dir string) bool {
+	info, err := os.Stat(dir)
+	if err != nil {
+		return false
+	}
+
+	return !info.IsDir()
 }
