@@ -613,7 +613,7 @@ type ActionInformation struct {
 
 // Include method provide to template for {{include "xx.tmpl"}}
 func (c *Action) Include(tmplName string) interface{} {
-	return c.App.TemplateEx.Include(tmplName, c.GetFuncs(), c.C.Elem().Interface())
+	return c.App.TemplateEx.Include(tmplName, c.GetFuncs, c.C.Elem().Interface())
 }
 
 func (c *Action) setTemplateData(params ...*T) {
@@ -672,7 +672,7 @@ func (c *Action) getTemplate(tmpl string) ([]byte, error) {
 // render the template with vars map, you can have zero or one map
 func (c *Action) Render(tmpl string, params ...*T) (err error) {
 	c.setTemplateData(params...)
-	content := c.App.TemplateEx.Fetch(tmpl, c.GetFuncs(), c.C.Elem().Interface())
+	content := c.App.TemplateEx.Fetch(tmpl, c.GetFuncs, c.C.Elem().Interface())
 	b := []byte(content)
 	Event("AfterRender", &ActionInformation{c, nil, &b}, func(result bool) {
 		if result {

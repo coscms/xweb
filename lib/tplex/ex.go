@@ -74,7 +74,7 @@ type TemplateEx struct {
 	Ext              string
 }
 
-func (self *TemplateEx) Fetch(tmplName string, funcMap htmlTpl.FuncMap, values interface{}) string {
+func (self *TemplateEx) Fetch(tmplName string, fn func() htmlTpl.FuncMap, values interface{}) string {
 	tmplName += self.Ext
 	tmpl, ok := self.CachedTemplate[tmplName]
 	if !ok {
@@ -98,7 +98,11 @@ func (self *TemplateEx) Fetch(tmplName string, funcMap htmlTpl.FuncMap, values i
 		//fmt.Println("====>", content)
 		t := htmlTpl.New(tmplName)
 		t.Delims(self.DelimLeft, self.DelimRight)
-		t.Funcs(funcMap)
+		var funcMap htmlTpl.FuncMap
+		if fn != nil {
+			funcMap = fn()
+			t.Funcs(funcMap)
+		}
 
 		tmpl, err = t.Parse(content)
 		if err != nil {
@@ -162,7 +166,7 @@ func (self *TemplateEx) Tag(content string) string {
 }
 
 // Include method provide to template for {{include "about"}}
-func (self *TemplateEx) Include(tmplName string, funcMap htmlTpl.FuncMap, values interface{}) interface{} {
+func (self *TemplateEx) Include(tmplName string, fn func() htmlTpl.FuncMap, values interface{}) interface{} {
 	tmplName += self.Ext
 	tmpl, ok := self.CachedTemplate[tmplName]
 	if !ok {
@@ -178,7 +182,9 @@ func (self *TemplateEx) Include(tmplName string, funcMap htmlTpl.FuncMap, values
 
 		t := htmlTpl.New(tmplName)
 		t.Delims(self.DelimLeft, self.DelimRight)
-		t.Funcs(funcMap)
+		if fn != nil {
+			t.Funcs(fn())
+		}
 
 		tmpl, err = t.Parse(content)
 		if err != nil {
