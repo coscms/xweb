@@ -158,8 +158,9 @@ func (self *TemplateEx) Tag(content string) string {
 	return self.DelimLeft + content + self.DelimRight
 }
 
-// Include method provide to template for {{include "xx.tmpl"}}
+// Include method provide to template for {{include "about"}}
 func (self *TemplateEx) Include(tmplName string, funcMap htmlTpl.FuncMap, values interface{}) interface{} {
+	tmplName += self.Ext
 	tmpl, ok := self.CachedTemplate[tmplName]
 	if !ok {
 		b, err := self.RawContent(tmplName)
