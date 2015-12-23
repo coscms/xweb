@@ -1,3 +1,7 @@
+/**
+ * 模板扩展
+ * @author swh <swh@admpub.com>
+ */
 package tplex
 
 import (
@@ -23,6 +27,7 @@ func New(logger *log.Logger, templateDir string, cached ...bool) *TempateEx {
 		TemplateMgr:    new(TemplateMgr),
 		DelimLeft:      "{{",
 		DelimRight:     "}}",
+		IncludeTag:     "Include",
 	}
 	mgrCtlLen := len(cached)
 	if mgrCtlLen > 0 && cached[0] {
@@ -44,6 +49,7 @@ type TempateEx struct {
 	DelimLeft      string
 	DelimRight     string
 	incTagRegex    *regexp.Regexp
+	IncludeTag     string
 }
 
 func (self *TempateEx) Fetch(tmplName string, funcMap htmlTpl.FuncMap, values interface{}) interface{} {
@@ -58,9 +64,10 @@ func (self *TempateEx) Fetch(tmplName string, funcMap htmlTpl.FuncMap, values in
 		if self.BeforeRender != nil {
 			self.BeforeRender(&content)
 		}
-
-		content = self.ContainsSubTpl(content)
-
+		subcs := make([]string, 0) //子模板内容
+		subfs := make([]string, 0) //子模板文件名
+		content = self.ContainsSubTpl(content, &subcs, &subfs)
+		//fmt.Println("====>", content)
 		t := htmlTpl.New(tmplName)
 		t.Delims(self.DelimLeft, self.DelimRight)
 		t.Funcs(funcMap)
@@ -69,29 +76,52 @@ func (self *TempateEx) Fetch(tmplName string, funcMap htmlTpl.FuncMap, values in
 		if err != nil {
 			return fmt.Sprintf("Parse %v err: %v", tmplName, err)
 		}
+		for k, subc := range subcs {
+			name := subfs[k]
+			var t *htmlTpl.Template
+			if tmpl == nil {
+				tmpl = htmlTpl.New(name)
+				tmpl.Delims(self.DelimLeft, self.DelimRight)
+				tmpl.Funcs(funcMap)
+			}
+			if name == tmpl.Name() {
+				t = tmpl
+			} else {
+				t = tmpl.New(name)
+			}
+			_, err = t.Parse(subc)
+			if err != nil {
+				return fmt.Sprintf("Parse %v err: %v", name, err)
+			}
+		}
 		self.CachedTemplate[tmplName] = tmpl
 		self.CachedRelation[tmplName] = tmplName
 	}
 	return self.Parse(tmpl, values)
 }
 
-func (self *TempateEx) ContainsSubTpl(content string) string {
-	self.incTagRegex = regexp.MustCompile(regexp.QuoteMeta(self.DelimLeft) + `Include "([^"]+)"` + regexp.QuoteMeta(self.DelimRight))
+func (self *TempateEx) ContainsSubTpl(content string, subcs *[]string, subfs *[]string) string {
+	self.incTagRegex = regexp.MustCompile(regexp.QuoteMeta(self.DelimLeft) + self.IncludeTag + `[\s]+"([^"]+)"(?:[\s]+([` + regexp.QuoteMeta(self.DelimRight[0:1]) + `]+))?[\s]*` + regexp.QuoteMeta(self.DelimRight))
 	matches := self.incTagRegex.FindAllStringSubmatch(content, -1)
-	c, _ := json.MarshalIndent(matches, "", " ")
-	fmt.Println(string(c))
-	subContent := ""
+	//dump(matches)
 	for _, v := range matches {
+		matched := v[0]
 		tmplFile := v[1]
+		passObject := v[2]
 		b, err := self.RawContent(tmplFile)
 		if err != nil {
 			return fmt.Sprintf("RenderTemplate %v read err: %s", tmplFile, err)
 		}
 		str := string(b)
-		subContent += self.Tag(`define "`+tmplFile+`"`) + self.ContainsSubTpl(str) + self.Tag(`end`)
-		content = strings.Replace(content, v[0], self.Tag(`template "`+tmplFile+`"`), -1)
+		str = self.ContainsSubTpl(str, subcs, subfs)
+		sub := self.Tag(`define "`+tmplFile+`"`) + str + self.Tag(`end`)
+		*subcs = append(*subcs, sub)
+		*subfs = append(*subfs, tmplFile)
+		if passObject == "" {
+			passObject = "."
+		}
+		content = strings.Replace(content, matched, self.Tag(`template "`+tmplFile+`" `+passObject), -1)
 	}
-	content = subContent + content
 	return content
 }
 
@@ -174,4 +204,9 @@ func fileExists(dir string) bool {
 	}
 
 	return !info.IsDir()
+}
+
+func dump(i interface{}) {
+	c, _ := json.MarshalIndent(i, "", " ")
+	fmt.Println(string(c))
 }
