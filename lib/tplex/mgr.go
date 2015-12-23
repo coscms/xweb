@@ -134,7 +134,8 @@ func (self *TemplateMgr) OnChange(name, typ, event string) {
 	if self.OnChangeCallback != nil {
 		self.mutex.Lock()
 		defer self.mutex.Unlock()
-		self.OnChangeCallback(name, typ, event)
+		name = FixDirSeparator(name)
+		self.OnChangeCallback(name[len(self.RootDir)+1:], typ, event)
 	}
 }
 

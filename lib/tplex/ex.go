@@ -34,6 +34,8 @@ func New(logger *log.Logger, templateDir string, cached ...bool) *TemplateEx {
 			reloadTemplates = cached[1]
 		}
 		t.TemplateMgr.OnChangeCallback = func(name, typ, event string) {
+			//logger.Infof("OnChange: %v %v %v", name, typ, event)
+			//dump(t.CachedRelation)
 			switch event {
 			case "create":
 			case "delete", "modify", "rename":
@@ -42,11 +44,13 @@ func New(logger *log.Logger, templateDir string, cached ...bool) *TemplateEx {
 				}
 				if key, ok := t.CachedRelation[name]; ok {
 					if _, ok := t.CachedTemplate[key]; ok {
+						logger.Infof("delete template parsed cache %v success", key)
 						delete(t.CachedTemplate, key)
 					}
 					delete(t.CachedRelation, name)
 				}
 				if _, ok := t.CachedTemplate[name]; ok {
+					logger.Infof("delete template parsed cache %v success", name)
 					delete(t.CachedTemplate, name)
 				}
 			}
