@@ -18,8 +18,7 @@ import (
 
 func New(logger *log.Logger, templateDir string, cached ...bool) *TemplateEx {
 	t := &TemplateEx{
-		CachedTemplate: make(map[string]*htmlTpl.Template),
-		CachedRelation: make(map[string]string),
+		CachedRelation: make(map[string]*CcRel),
 		TemplateDir:    templateDir,
 		TemplateMgr:    new(TemplateMgr),
 		DelimLeft:      "{{",
@@ -42,16 +41,18 @@ func New(logger *log.Logger, templateDir string, cached ...bool) *TemplateEx {
 				if typ == "dir" {
 					return
 				}
-				if key, ok := t.CachedRelation[name]; ok {
-					if _, ok := t.CachedTemplate[key]; ok {
-						logger.Infof("remove cached template object: %v", key)
-						delete(t.CachedTemplate, key)
+				if cs, ok := t.CachedRelation[name]; ok {
+					for key, _ := range cs.Rel {
+						if name == key {
+							logger.Infof("remove cached template object: %v", key)
+							continue
+						}
+						if _, ok := t.CachedRelation[key]; ok {
+							logger.Infof("remove cached template object: %v", key)
+							delete(t.CachedRelation, key)
+						}
 					}
 					delete(t.CachedRelation, name)
-				}
-				if _, ok := t.CachedTemplate[name]; ok {
-					logger.Infof("remove cached template object: %v", name)
-					delete(t.CachedTemplate, name)
 				}
 			}
 		}
@@ -60,9 +61,13 @@ func New(logger *log.Logger, templateDir string, cached ...bool) *TemplateEx {
 	return t
 }
 
+type CcRel struct {
+	Rel map[string]uint8
+	Tpl *htmlTpl.Template
+}
+
 type TemplateEx struct {
-	CachedTemplate   map[string]*htmlTpl.Template
-	CachedRelation   map[string]string
+	CachedRelation   map[string]*CcRel
 	TemplateDir      string
 	TemplateMgr      *TemplateMgr
 	BeforeRender     func(*string)
@@ -76,7 +81,8 @@ type TemplateEx struct {
 
 func (self *TemplateEx) Fetch(tmplName string, fn func() htmlTpl.FuncMap, values interface{}) string {
 	tmplName += self.Ext
-	tmpl, ok := self.CachedTemplate[tmplName]
+	var tmpl *htmlTpl.Template
+	cv, ok := self.CachedRelation[tmplName]
 	if !ok {
 		b, err := self.RawContent(tmplName)
 		if err != nil {
@@ -109,7 +115,11 @@ func (self *TemplateEx) Fetch(tmplName string, fn func() htmlTpl.FuncMap, values
 			return fmt.Sprintf("Parse %v err: %v", tmplName, err)
 		}
 		for name, subc := range subcs {
-			self.CachedRelation[name] = tmplName
+			if _, ok := self.CachedRelation[name]; ok {
+				self.CachedRelation[name].Rel[tmplName] = 0
+				continue
+			}
+			//fmt.Println("====>", name)
 			var t *htmlTpl.Template
 			if tmpl == nil {
 				tmpl = htmlTpl.New(name)
@@ -128,9 +138,17 @@ func (self *TemplateEx) Fetch(tmplName string, fn func() htmlTpl.FuncMap, values
 			if err != nil {
 				return fmt.Sprintf("Parse %v err: %v", name, err)
 			}
+			self.CachedRelation[name] = &CcRel{
+				Rel: map[string]uint8{tmplName: 0},
+				Tpl: t,
+			}
 		}
-		self.CachedTemplate[tmplName] = tmpl
-		self.CachedRelation[tmplName] = tmplName
+		self.CachedRelation[tmplName] = &CcRel{
+			Rel: map[string]uint8{tmplName: 0},
+			Tpl: tmpl,
+		}
+	} else {
+		tmpl = cv.Tpl
 	}
 	return self.Parse(tmpl, values)
 }
@@ -144,6 +162,10 @@ func (self *TemplateEx) ContainsSubTpl(content string, subcs *map[string]string)
 		passObject := v[2]
 		tmplFile += self.Ext
 		if _, ok := (*subcs)[tmplFile]; !ok {
+			if _, ok := self.CachedRelation[tmplFile]; ok {
+				(*subcs)[tmplFile] = ""
+				continue
+			}
 			b, err := self.RawContent(tmplFile)
 			if err != nil {
 				return fmt.Sprintf("RenderTemplate %v read err: %s", tmplFile, err)
@@ -167,33 +189,7 @@ func (self *TemplateEx) Tag(content string) string {
 
 // Include method provide to template for {{include "about"}}
 func (self *TemplateEx) Include(tmplName string, fn func() htmlTpl.FuncMap, values interface{}) interface{} {
-	tmplName += self.Ext
-	tmpl, ok := self.CachedTemplate[tmplName]
-	if !ok {
-		b, err := self.RawContent(tmplName)
-		if err != nil {
-			return fmt.Sprintf("RenderTemplate %v read err: %s", tmplName, err)
-		}
-
-		content := string(b)
-		if self.BeforeRender != nil {
-			self.BeforeRender(&content)
-		}
-
-		t := htmlTpl.New(tmplName)
-		t.Delims(self.DelimLeft, self.DelimRight)
-		if fn != nil {
-			t.Funcs(fn())
-		}
-
-		tmpl, err = t.Parse(content)
-		if err != nil {
-			return fmt.Sprintf("Parse %v err: %v", tmplName, err)
-		}
-		self.CachedTemplate[tmplName] = tmpl
-		self.CachedRelation[tmplName] = tmplName
-	}
-	return htmlTpl.HTML(self.Parse(tmpl, values))
+	return htmlTpl.HTML(self.Fetch(tmplName, fn, values))
 }
 
 func (self *TemplateEx) Parse(tmpl *htmlTpl.Template, values interface{}) string {
