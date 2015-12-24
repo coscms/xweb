@@ -1,13 +1,13 @@
 package main
 
 import (
-	"github.com/coscms/xweb"
+	"github.com/coscms/webx"
 )
 
 type MainAction struct {
-	*xweb.Action
+	*webx.Action
 
-	hello xweb.Mapper `xweb:"/(.*)"`
+	hello webx.Mapper `webx:"/(.*)"`
 }
 
 func (c *MainAction) Hello(world string) {
@@ -15,13 +15,13 @@ func (c *MainAction) Hello(world string) {
 }
 
 func main() {
-	app1 := xweb.NewApp("/")
+	app1 := webx.NewApp("/")
 	app1.AddAction(&MainAction{})
-	xweb.AddApp(app1)
+	webx.AddApp(app1)
 
-	app2 := xweb.NewApp("/user/")
+	app2 := webx.NewApp("/user/")
 	app2.AddAction(&MainAction{})
-	xweb.AddApp(app2)
+	webx.AddApp(app2)
 
-	xweb.Run("0.0.0.0:9999")
+	webx.Run("0.0.0.0:9999")
 }

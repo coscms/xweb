@@ -3,14 +3,14 @@ package main
 import (
 	"os"
 
-	"github.com/coscms/xweb"
-	"github.com/coscms/xweb/lib/log"
+	"github.com/coscms/webx"
+	"github.com/coscms/webx/lib/log"
 )
 
 type MainAction struct {
-	*xweb.Action
+	*webx.Action
 
-	hello xweb.Mapper `xweb:"/(.*)"`
+	hello webx.Mapper `webx:"/(.*)"`
 }
 
 func (c *MainAction) Hello(world string) {
@@ -25,7 +25,7 @@ func main() {
 	}
 	logger := log.New(f, "", log.Ldate|log.Ltime)
 
-	xweb.AddAction(&MainAction{})
-	xweb.SetLogger(logger)
-	xweb.Run("0.0.0.0:9999")
+	webx.AddAction(&MainAction{})
+	webx.SetLogger(logger)
+	webx.Run("0.0.0.0:9999")
 }

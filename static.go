@@ -1,4 +1,4 @@
-package xweb
+package webx
 
 import (
 	"crypto/md5"

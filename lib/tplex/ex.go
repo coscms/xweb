@@ -13,7 +13,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/coscms/xweb/lib/log"
+	"github.com/coscms/webx/lib/log"
 )
 
 func New(logger *log.Logger, templateDir string, cached ...bool) *TemplateEx {

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"html"
 
-	"github.com/coscms/xweb"
+	"github.com/coscms/webx"
 )
 
 var cookieName = "cookie"
@@ -26,10 +26,10 @@ var form = `
 `
 
 type CookieAction struct {
-	*xweb.Action
+	*webx.Action
 
-	index  xweb.Mapper `xweb:"/"`
-	update xweb.Mapper
+	index  webx.Mapper `webx:"/"`
+	update webx.Mapper
 }
 
 func (this *CookieAction) Index() string {
@@ -46,14 +46,14 @@ func (this *CookieAction) Index() string {
 
 func (this *CookieAction) Update() {
 	if this.GetString("submit") == "Delete" {
-		this.SetCookie(xweb.NewCookie(cookieName, "", -1))
+		this.SetCookie(webx.NewCookie(cookieName, "", -1))
 	} else {
-		this.SetCookie(xweb.NewCookie(cookieName, this.GetString("cookie"), 0))
+		this.SetCookie(webx.NewCookie(cookieName, this.GetString("cookie"), 0))
 	}
 	this.Redirect("/", 301)
 }
 
 func main() {
-	xweb.AddAction(&CookieAction{})
-	xweb.Run("0.0.0.0:9999")
+	webx.AddAction(&CookieAction{})
+	webx.Run("0.0.0.0:9999")
 }

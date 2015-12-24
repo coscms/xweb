@@ -1,4 +1,4 @@
-package xweb
+package webx
 
 import (
 	"crypto/tls"
@@ -12,9 +12,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/coscms/xweb/lib/httpsession"
-	"github.com/coscms/xweb/lib/log"
-	S "github.com/coscms/xweb/lib/manners"
+	"github.com/coscms/webx/lib/httpsession"
+	"github.com/coscms/webx/lib/log"
+	S "github.com/coscms/webx/lib/manners"
 	"golang.org/x/net/netutil"
 )
 
@@ -38,7 +38,7 @@ type ServerConfig struct {
 	GracefulShutdown       bool
 }
 
-// Server represents a xweb server.
+// Server represents a webx server.
 type Server struct {
 	Config         *ServerConfig
 	Apps           map[string]*App   //r["root"]
@@ -163,7 +163,7 @@ func (s *Server) Process(w http.ResponseWriter, req *http.Request) {
 	s.RootApp.RequestTime = time.Now()
 
 	//set some default headers
-	w.Header().Set("Server", "xweb v"+Version)
+	w.Header().Set("Server", "webx v"+Version)
 	w.Header().Set("Date", webTime(s.RootApp.RequestTime.UTC()))
 
 	Event("ServerProcess", &ServerInformation{s, w, req}, func(result bool) {
@@ -243,7 +243,7 @@ func (s *Server) Run(addr string) error {
 
 func (s *Server) run(addr string, l net.Listener) (err error) {
 	if s.Config.Debug {
-		println(`[xweb] Server "` + s.Name + `" has been launched.`)
+		println(`[webx] Server "` + s.Name + `" has been launched.`)
 	}
 	addrs := strings.Split(addr, ":")
 	s.Config.Addr = addrs[0]
@@ -296,7 +296,7 @@ func (s *Server) run(addr string, l net.Listener) (err error) {
 	}
 	s.Close()
 	if s.Config.Debug {
-		println(`[xweb] Server "` + s.Name + `" has been closed.`)
+		println(`[webx] Server "` + s.Name + `" has been closed.`)
 	}
 	return
 }

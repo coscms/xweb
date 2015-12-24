@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/coscms/xweb"
+	"github.com/coscms/webx"
 )
 
 var page = `
@@ -26,9 +26,9 @@ var page = `
 `
 
 type MainAction struct {
-	*xweb.Action
+	*webx.Action
 
-	upload xweb.Mapper `xweb:"/"`
+	upload webx.Mapper `webx:"/"`
 
 	Id     int
 	Input1 string
@@ -49,6 +49,6 @@ func (c *MainAction) Upload() {
 }
 
 func main() {
-	xweb.AddAction(&MainAction{})
-	xweb.Run("0.0.0.0:9999")
+	webx.AddAction(&MainAction{})
+	webx.Run("0.0.0.0:9999")
 }

@@ -1,4 +1,4 @@
-package xweb
+package webx
 
 import (
 	"errors"
@@ -17,10 +17,10 @@ import (
 	"time"
 
 	"github.com/coscms/tagfast"
-	"github.com/coscms/xweb/lib/httpsession"
-	"github.com/coscms/xweb/lib/log"
-	"github.com/coscms/xweb/lib/route"
-	"github.com/coscms/xweb/lib/tplex"
+	"github.com/coscms/webx/lib/httpsession"
+	"github.com/coscms/webx/lib/log"
+	"github.com/coscms/webx/lib/route"
+	"github.com/coscms/webx/lib/tplex"
 )
 
 var (
@@ -172,7 +172,7 @@ func (a *App) initApp() {
 	}
 	a.FuncMaps["StaticUrl"] = a.StaticUrl
 	a.FuncMaps["XsrfName"] = XsrfName
-	a.VarMaps["XwebVer"] = Version
+	a.VarMaps["webxVer"] = Version
 
 	if a.AppConfig.SessionOn {
 		if a.Server.SessionManager != nil {
@@ -374,7 +374,7 @@ func (app *App) AddRouter(url string, c interface{}) {
 		}
 
 		tag := t.Field(i).Tag
-		tagStr := tag.Get("xweb")
+		tagStr := tag.Get("webx")
 		methods := map[string]bool{}    //map[string]bool{"GET": true, "POST": true}
 		extensions := map[string]bool{} //map[string]bool{"HTML": true, "JSON": true}
 		group := map[string]bool{}      //map[string]bool{"GET_HTML": true, "POST_JSON": true}
@@ -383,7 +383,7 @@ func (app *App) AddRouter(url string, c interface{}) {
 			tags := strings.Split(tagStr, " ")
 			path := tagStr
 			length := len(tags)
-			if length >= 2 { //`xweb:"GET|POST /index"`
+			if length >= 2 { //`webx:"GET|POST /index"`
 				meStr = tags[0]
 				path = tags[1]
 				if path == "" {
@@ -396,10 +396,10 @@ func (app *App) AddRouter(url string, c interface{}) {
 				if matched, _ := regexp.MatchString(`^[A-Z.]+(\|[A-Z]+)*$`, tags[0]); !matched {
 					//非全大写字母时，判断为网址规则
 					path = tags[0]
-					if tags[0][0] != '/' { //`xweb:"index"`
+					if tags[0][0] != '/' { //`webx:"index"`
 						path = "/" + actionShortName + "/" + path
 					}
-				} else { //`xweb:"GET|POST"`
+				} else { //`webx:"GET|POST"`
 					meStr = tags[0]
 					path = "/" + actionShortName + "/" + name
 				}

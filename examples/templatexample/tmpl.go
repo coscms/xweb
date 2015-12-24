@@ -1,13 +1,13 @@
 package main
 
 import (
-	"github.com/coscms/xweb"
+	"github.com/coscms/webx"
 )
 
 type MainAction struct {
-	*xweb.Action
+	*webx.Action
 
-	home xweb.Mapper `xweb:"/"`
+	home webx.Mapper `webx:"/"`
 }
 
 func hello1() string {
@@ -23,7 +23,7 @@ func hello3() string {
 }
 
 func (this *MainAction) Home() error {
-	return this.Render("home", &xweb.T{
+	return this.Render("home", &webx.T{
 		"title":  "模版测试例子",
 		"body":   "模版具体内容",
 		"footer": "版权所有",
@@ -34,6 +34,6 @@ func (this *MainAction) Home() error {
 }
 
 func main() {
-	xweb.AddAction(&MainAction{})
-	xweb.Run("0.0.0.0:8888")
+	webx.AddAction(&MainAction{})
+	webx.Run("0.0.0.0:8888")
 }

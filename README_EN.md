@@ -1,10 +1,10 @@
-# xweb
+# webx
 
-xweb is a web framework for Go which is based on web.go. It just like Struts for Java. 
+webx is a web framework for Go which is based on web.go. It just like Struts for Java. 
 
-[中文](https://github.com/coscms/xweb/blob/master/README.md)
+[中文](https://github.com/coscms/webx/blob/master/README.md)
 
-[![Build Status](https://drone.io/github.com/coscms/xweb/status.png)](https://drone.io/github.com/coscms/xweb/latest)  [![Go Walker](http://gowalker.org/api/v1/badge)](http://gowalker.org/github.com/coscms/xweb)
+[![Build Status](https://drone.io/github.com/coscms/webx/status.png)](https://drone.io/github.com/coscms/webx/latest)  [![Go Walker](http://gowalker.org/api/v1/badge)](http://gowalker.org/github.com/coscms/webx)
 
 ## Changelog
 
@@ -20,13 +20,13 @@ xweb is a web framework for Go which is based on web.go. It just like Struts for
 
 Make sure you have the a working Go environment. See the [install instructions](http://golang.org/doc/install.html). 
 
-To install xweb, simply run:
+To install webx, simply run:
 
-    go get github.com/coscms/xweb
+    go get github.com/coscms/webx
 
 ## Examples
 
-Please visit [examples](https://github.com/coscms/xweb/tree/master/examples) folder
+Please visit [examples](https://github.com/coscms/webx/tree/master/examples) folder
 
 ## Case
 
@@ -35,7 +35,7 @@ Please visit [examples](https://github.com/coscms/xweb/tree/master/examples) fol
 
 ## Documentation
 
-API, Please visit [GoWalker](http://gowalker.org/github.com/coscms/xweb)
+API, Please visit [GoWalker](http://gowalker.org/github.com/coscms/webx)
 
 
 ## License

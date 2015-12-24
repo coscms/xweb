@@ -4,15 +4,15 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/coscms/xweb"
+	"github.com/coscms/webx"
 )
 
 type MainAction struct {
-	*xweb.Action
+	*webx.Action
 
 	start time.Time
 
-	hello xweb.Mapper `xweb:"/(.*)"`
+	hello webx.Mapper `webx:"/(.*)"`
 }
 
 func (c *MainAction) Hello(world string) {
@@ -31,6 +31,6 @@ func (c *MainAction) After(structName, actionName string, actionResult interface
 }
 
 func main() {
-	xweb.AddRouter("/", &MainAction{})
-	xweb.Run("0.0.0.0:9999")
+	webx.AddRouter("/", &MainAction{})
+	webx.Run("0.0.0.0:9999")
 }

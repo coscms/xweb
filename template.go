@@ -1,4 +1,4 @@
-package xweb
+package webx
 
 import (
 	"fmt"
@@ -19,7 +19,7 @@ import (
  * XsrfName     —— XsrfName() string
  * StaticUrl    —— StaticUrl(url string) string
  * 支持变量：
- * XwebVer      —— string
+ * webxVer      —— string
  */
 var (
 	DefaultFuncs template.FuncMap = template.FuncMap{

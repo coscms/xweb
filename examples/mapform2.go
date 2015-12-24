@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/coscms/xweb"
+	"github.com/coscms/webx"
 )
 
 var page = `
@@ -19,9 +19,9 @@ var page = `
 `
 
 type MainAction struct {
-	*xweb.Action
+	*webx.Action
 
-	parse xweb.Mapper `xweb:"/"`
+	parse webx.Mapper `webx:"/"`
 }
 
 type User struct {
@@ -50,6 +50,6 @@ func (c *MainAction) Parse() error {
 }
 
 func main() {
-	xweb.AddAction(&MainAction{})
-	xweb.Run("0.0.0.0:9999")
+	webx.AddAction(&MainAction{})
+	webx.Run("0.0.0.0:9999")
 }

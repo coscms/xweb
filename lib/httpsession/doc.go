@@ -9,8 +9,8 @@ Installation
 
 Make sure you have installed Go 1.1+ and then:
 
-    go get github.com/coscms/xweb/lib/httpsession
+    go get github.com/coscms/webx/lib/httpsession
 
-More usage, please visit https://github.com/coscms/xweb/lib/httpsession/
+More usage, please visit https://github.com/coscms/webx/lib/httpsession/
 */
 package httpsession

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/coscms/xweb"
+	"github.com/coscms/webx"
 )
 
 var tmpl = `
@@ -70,10 +70,10 @@ type User struct {
 }
 
 type MainAction struct {
-	*xweb.Action
+	*webx.Action
 
-	home  xweb.Mapper `xweb:"/"`
-	login xweb.Mapper
+	home  webx.Mapper `webx:"/"`
+	login webx.Mapper
 	User  User
 }
 
@@ -92,8 +92,8 @@ func (c *MainAction) Login() error {
 }
 
 func main() {
-	xweb.RootApp().AppConfig.CheckXsrf = false
-	xweb.RootApp().AppConfig.SessionOn = false
-	xweb.AddRouter("/", &MainAction{})
-	xweb.Run("0.0.0.0:9999")
+	webx.RootApp().AppConfig.CheckXsrf = false
+	webx.RootApp().AppConfig.SessionOn = false
+	webx.AddRouter("/", &MainAction{})
+	webx.Run("0.0.0.0:9999")
 }

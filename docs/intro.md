@@ -1,9 +1,9 @@
-# xweb介绍
+# webx介绍
 
-xweb是一个基于web.go开发的web框架，目前它和Java框架Struts有些类似。
+webx是一个基于web.go开发的web框架，目前它和Java框架Struts有些类似。
 
 
-# xweb特性
+# webx特性
 
 * 在一个可执行程序中多Server，多App的支持
 * 简单好用的路由映射方式
@@ -22,10 +22,10 @@ xweb是一个基于web.go开发的web框架，目前它和Java框架Struts有些
 
 如果我们只需要一个server和一个app，则可以直接调用
 ```Go
-xweb.AddAction
-xweb.AutoAction
-xweb.AddRouter
-xweb.Run
+webx.AddAction
+webx.AutoAction
+webx.AddRouter
+webx.Run
 ```
 即可运行服务器。
 
@@ -41,7 +41,7 @@ App路由映射其实有两个层次，一个层次是App层，一个App及其�
 
 App在创建时调用`NewApp`时必须指定此app的映射规则，挂载到服务器的路径
 ```Go
-app := xweb.NewApp("/main")
+app := webx.NewApp("/main")
 ```
 
 App在添加Action时，可以指定此App下所有Mapper的映射规则，有三个函数：
@@ -54,7 +54,7 @@ App在添加Action时，可以指定此App下所有Mapper的映射规则，有�
 
 ```Go
 type MainAction struct {
- 	xweb.Action
+ 	webx.Action
 }
 
 app.AutoAction(&MainAction{})
@@ -73,9 +73,9 @@ Mapper的路由规则有两种形式：
 这时，这个路由即为Mapper的名字，对应执行的方法名为Title（mapper变量名）；如：
 ```Go
 type MainAction struct {
- 	xweb.Action
+ 	webx.Action
  	
- 	login xweb.Mapper
+ 	login webx.Mapper
 }
 
 func (this *MainAction) Login() {
@@ -117,7 +117,7 @@ type Filter interface {
 
 ## 自动映射
 
-通常我们通过http.Request.Form来获得从用户中请求到服务器端的数据，这些数据一般都是采用name，value的形式提交的。xweb默认支持自动将这些变量映射到Action的成员中，并且这种映射支持子Struct。例如：
+通常我们通过http.Request.Form来获得从用户中请求到服务器端的数据，这些数据一般都是采用name，value的形式提交的。webx默认支持自动将这些变量映射到Action的成员中，并且这种映射支持子Struct。例如：
 
 ```Go
 type HomeAction struct {
@@ -177,7 +177,7 @@ func (c *MainAction) Parse() error {
 模板中可以使用的函数或者变量来源如下：
 
     1）Go模板自带的模板函数
-    2）xweb内置的模板函数和变量
+    2）webx内置的模板函数和变量
     3）通过Server.Assign或者MultiAssign添加的函数或者变量
     4）通过App.Assign或者MultiAssign添加的函数或者变量
     5）通过Action.Assign或者MultiAssign添加的函数或者变量
@@ -187,9 +187,9 @@ func (c *MainAction) Parse() error {
 
 这个请参见 [https://gowalker.org/text/template](https://gowalker.org/text/template)
    
-## xweb内置的模板函数和变量
+## webx内置的模板函数和变量
 
-xweb内置的模板函数和Go模板函数一样，在模板中使用{{funcName ...}}形式调用。内置的变量使用{{.T.}}方式调用。
+webx内置的模板函数和Go模板函数一样，在模板中使用{{funcName ...}}形式调用。内置的变量使用{{.T.}}方式调用。
 
 * `IsNil(a interface{}) bool`
 判断一个指针是否为空
@@ -237,9 +237,9 @@ xweb内置的模板函数和Go模板函数一样，在模板中使用{{funcName 
 获取cookie的指
 
 
-## 通过xweb.Assign或者MultiAssign添加的函数或者变量
+## 通过webx.Assign或者MultiAssign添加的函数或者变量
 
-通过xweb.Assign或者MultiAssign添加的函数或者变量在MainServer的RootApp范围内有效，在模板中使用{{funcName ...}}形式调用函数。变量使用{{.T.}}方式调用。
+通过webx.Assign或者MultiAssign添加的函数或者变量在MainServer的RootApp范围内有效，在模板中使用{{funcName ...}}形式调用函数。变量使用{{.T.}}方式调用。
 
 ## 通过App.Assign或者MultiAssign添加的函数或者变量
 
@@ -255,7 +255,7 @@ Action的公共变量，通过{{.xxx}}的方式调用，公共方法通过{{.xxx
 
 
 ## 模板包含
-xweb使用include函数来进行模板包含，而不使用template函数。
+webx使用include函数来进行模板包含，而不使用template函数。
 
 * `include(tmpl string) interface{}`
 包含另外一个模版

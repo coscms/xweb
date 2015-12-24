@@ -1,4 +1,5 @@
-package xweb
+package webx
+
 import (
 	"fmt"
 	"io"

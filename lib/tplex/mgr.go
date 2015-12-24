@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/coscms/xweb/lib/log"
+	"github.com/coscms/webx/lib/log"
 	"github.com/howeyc/fsnotify"
 )
 
@@ -32,7 +32,7 @@ func (self *TemplateMgr) Moniter(rootDir string) error {
 	if err != nil {
 		return err
 	}
-	//fmt.Println("[xweb] TemplateMgr watcher is start.")
+	//fmt.Println("[webx] TemplateMgr watcher is start.")
 	defer watcher.Close()
 	done := make(chan bool)
 	go func() {
@@ -126,7 +126,7 @@ func (self *TemplateMgr) Moniter(rootDir string) error {
 	}
 
 	<-done
-	//fmt.Println("[xweb] TemplateMgr watcher is closed.")
+	//fmt.Println("[webx] TemplateMgr watcher is closed.")
 	return nil
 }
 

@@ -3,13 +3,13 @@ package main
 import (
 	"fmt"
 
-	"github.com/coscms/xweb"
+	"github.com/coscms/webx"
 )
 
 type MainAction struct {
-	*xweb.Action
+	*webx.Action
 
-	hello xweb.Mapper `xweb:"/(.*)"`
+	hello webx.Mapper `webx:"/(.*)"`
 }
 
 var content string = `
@@ -28,6 +28,6 @@ func (c *MainAction) Hello(world string) {
 }
 
 func main() {
-	xweb.AddAction(&MainAction{})
-	xweb.Run("0.0.0.0:9999")
+	webx.AddAction(&MainAction{})
+	webx.Run("0.0.0.0:9999")
 }

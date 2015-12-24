@@ -1,4 +1,4 @@
-package xweb
+package webx
 
 func NewCONF() *CONF {
 	return &CONF{

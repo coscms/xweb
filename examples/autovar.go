@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/coscms/xweb"
+	"github.com/coscms/webx"
 )
 
 type User struct {
@@ -21,9 +21,9 @@ type User struct {
 }
 
 type MainAction struct {
-	*xweb.Action
+	*webx.Action
 
-	get xweb.Mapper `xweb:"/"`
+	get webx.Mapper `webx:"/"`
 
 	User  User
 	User2 *User
@@ -47,9 +47,9 @@ func (c *MainAction) Get() {
 }
 
 func main() {
-	xweb.AddAction(&MainAction{})
-	xweb.RootApp().AppConfig.CheckXsrf = false
-	go xweb.Run("0.0.0.0:9999")
+	webx.AddAction(&MainAction{})
+	webx.RootApp().AppConfig.CheckXsrf = false
+	go webx.Run("0.0.0.0:9999")
 
 	values := url.Values{"key": {"Value"}, "id": {"123"},
 		"user.id": {"2"}, "user2.ptrId": {"3"},

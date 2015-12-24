@@ -5,21 +5,21 @@ import (
 	"log"
 	"os"
 
+	"github.com/coscms/webx"
 	"github.com/go-xorm/xorm"
-	"github.com/coscms/xweb"
 	_ "github.com/mattn/go-sqlite3"
 )
 
 type MainAction struct {
-	*xweb.Action
+	*webx.Action
 
-	root   xweb.Mapper `xweb:"GET /"`
-	list   xweb.Mapper `xweb:"GET /list"`
-	login  xweb.Mapper
-	logout xweb.Mapper
-	add    xweb.Mapper `xweb:"GET|POST /add"`
-	del    xweb.Mapper `xweb:"GET /delete"`
-	edit   xweb.Mapper `xweb:"/edit"`
+	root   webx.Mapper `webx:"GET /"`
+	list   webx.Mapper `webx:"GET /list"`
+	login  webx.Mapper
+	logout webx.Mapper
+	add    webx.Mapper `webx:"GET|POST /add"`
+	del    webx.Mapper `webx:"GET /delete"`
+	edit   webx.Mapper `webx:"/edit"`
 
 	Id   int64
 	User User
@@ -82,7 +82,7 @@ func (c *MainAction) List() error {
 	users := make([]User, 0)
 	err := engine.Find(&users)
 	if err == nil {
-		err = c.Render("list.html", &xweb.T{
+		err = c.Render("list.html", &webx.T{
 			"Users": &users,
 		})
 	}
@@ -164,10 +164,10 @@ func (c *MainAction) Edit() {
 }
 
 func main() {
-	xweb.AddAction(&MainAction{})
+	webx.AddAction(&MainAction{})
 
-	app := xweb.MainServer().RootApp
-	filter := xweb.NewLoginFilter(app, "userId", "/login")
+	app := webx.MainServer().RootApp
+	filter := webx.NewLoginFilter(app, "userId", "/login")
 	filter.AddAnonymousUrls("/", "/login", "/logout")
 	app.AddFilter(filter)
 	//app.AppConfig.StaticFileVersion = false
@@ -178,6 +178,6 @@ func main() {
 		return
 	}
 	logger := log.New(f, "", log.Ldate|log.Ltime)
-	xweb.SetLogger(logger)
-	xweb.Run("0.0.0.0:8080")
+	webx.SetLogger(logger)
+	webx.Run("0.0.0.0:8080")
 }

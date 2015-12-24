@@ -1,10 +1,10 @@
-package xweb
+package webx
 
 import (
 	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
-	"github.com/coscms/xweb/lib/str"
+	"github.com/coscms/webx/lib/str"
 	"log"
 )
 

@@ -6,7 +6,7 @@ Csession provides a client session for http client. It has the same methods as h
 
 ## Installing csession
 
-	go get github.com/coscms/xweb/lib/httpsession/csession
+	go get github.com/coscms/webx/lib/httpsession/csession
 
 ## Quick Start
 
@@ -14,7 +14,7 @@ Csession provides a client session for http client. It has the same methods as h
  
 ```Go
 import (
-	"github.com/coscms/xweb/lib/httpsession/csession"
+	"github.com/coscms/webx/lib/httpsession/csession"
 )
 session := csession.New()
 ```
@@ -23,7 +23,7 @@ or
 
 ```Go
 import (
-	"github.com/coscms/xweb/lib/httpsession/csession"
+	"github.com/coscms/webx/lib/httpsession/csession"
 )
 session := csession.NewSession(transport, checkRedirect, jar)
 ```
@@ -60,7 +60,7 @@ resp, err := sesion.Do(req)
 
 ## Documents 
 
-Please visit [GoWalker](http://gowalker.org/github.com/coscms/xweb/lib/httpsession/csession)
+Please visit [GoWalker](http://gowalker.org/github.com/coscms/webx/lib/httpsession/csession)
 
 
 ## LICENSE

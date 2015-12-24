@@ -3,13 +3,13 @@ package main
 import (
 	"fmt"
 
-	"github.com/coscms/xweb"
+	"github.com/coscms/webx"
 )
 
 type MainAction struct {
-	*xweb.Action
+	*webx.Action
 
-	hello xweb.Mapper `xweb:"/(.*)"`
+	hello webx.Mapper `webx:"/(.*)"`
 }
 
 func (c *MainAction) Hello(world string) {
@@ -17,14 +17,14 @@ func (c *MainAction) Hello(world string) {
 }
 
 func main() {
-	xweb.RootApp().AppConfig.SessionOn = false
-	xweb.AddRouter("/", &MainAction{})
+	webx.RootApp().AppConfig.SessionOn = false
+	webx.AddRouter("/", &MainAction{})
 
-	config, err := xweb.SimpleTLSConfig("cert.pem", "key.pem")
+	config, err := webx.SimpleTLSConfig("cert.pem", "key.pem")
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	xweb.RunTLS("0.0.0.0:9999", config)
+	webx.RunTLS("0.0.0.0:9999", config)
 }

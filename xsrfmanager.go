@@ -1,4 +1,4 @@
-package xweb
+package webx
 
 type XsrfManager interface {
 	Init(*Action)

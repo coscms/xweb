@@ -1,4 +1,4 @@
-package xweb
+package webx
 
 import (
 	"bytes"
@@ -21,10 +21,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/coscms/xweb/lib/httpsession"
-	"github.com/coscms/xweb/lib/log"
-	"github.com/coscms/xweb/lib/str"
-	"github.com/coscms/xweb/lib/uuid"
+	"github.com/coscms/webx/lib/httpsession"
+	"github.com/coscms/webx/lib/log"
+	"github.com/coscms/webx/lib/str"
+	"github.com/coscms/webx/lib/uuid"
 )
 
 type Mapper struct{}

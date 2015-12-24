@@ -1,13 +1,13 @@
 package main
 
 import (
-	"github.com/coscms/xweb"
+	"github.com/coscms/webx"
 )
 
 type MainAction struct {
-	*xweb.Action
+	*webx.Action
 
-	hello xweb.Mapper `xweb:"/(.*)"`
+	hello webx.Mapper `webx:"/(.*)"`
 }
 
 func (c *MainAction) Hello(world string) {
@@ -17,11 +17,11 @@ func (c *MainAction) Hello(world string) {
 func main() {
 	mc := &MainAction{}
 
-	server1 := xweb.NewServer()
+	server1 := webx.NewServer()
 	server1.AddRouter("/", mc)
 	go server1.Run("0.0.0.0:9999")
 
-	server2 := xweb.NewServer()
+	server2 := webx.NewServer()
 	server2.AddRouter("/", mc)
 	go server2.Run("0.0.0.0:8999")
 

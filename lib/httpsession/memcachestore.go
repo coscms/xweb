@@ -5,8 +5,8 @@ import (
 	"log"
 	"time"
 
-	"github.com/coscms/xweb/lib/str"
 	"github.com/bradfitz/gomemcache/memcache"
+	"github.com/coscms/webx/lib/str"
 )
 
 var RegNodeToGob bool

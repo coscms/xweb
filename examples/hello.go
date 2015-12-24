@@ -1,13 +1,13 @@
 package main
 
 import (
-	"github.com/coscms/xweb"
+	"github.com/coscms/webx"
 )
 
 type MainAction struct {
-	*xweb.Action
+	*webx.Action
 
-	hello xweb.Mapper `xweb:"/(.*)"`
+	hello webx.Mapper `webx:"/(.*)"`
 }
 
 func (c *MainAction) Hello(world string) {
@@ -15,7 +15,7 @@ func (c *MainAction) Hello(world string) {
 }
 
 func main() {
-	xweb.RootApp().AppConfig.SessionOn = false
-	xweb.AddRouter("/", &MainAction{})
-	xweb.Run("0.0.0.0:9999")
+	webx.RootApp().AppConfig.SessionOn = false
+	webx.AddRouter("/", &MainAction{})
+	webx.Run("0.0.0.0:9999")
 }
