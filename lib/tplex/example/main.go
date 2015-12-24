@@ -5,8 +5,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/coscms/webx/lib/log"
 	"github.com/coscms/webx/lib/tplex"
-	"github.com/coscms/webx/log"
 )
 
 func main() {

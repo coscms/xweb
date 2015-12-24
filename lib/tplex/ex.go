@@ -24,6 +24,8 @@ func New(logger *log.Logger, templateDir string, cached ...bool) *TemplateEx {
 		DelimLeft:      "{{",
 		DelimRight:     "}}",
 		IncludeTag:     "Include",
+		ExtendTag:      "Extend",
+		BlockTag:       "Block",
 		Ext:            ".html",
 	}
 	mgrCtlLen := len(cached)
@@ -74,8 +76,12 @@ type TemplateEx struct {
 	DelimLeft        string
 	DelimRight       string
 	incTagRegex      *regexp.Regexp
+	extTagRegex      *regexp.Regexp
+	blkTagRegex      *regexp.Regexp
 	cachedRegexIdent string
 	IncludeTag       string
+	ExtendTag        string
+	BlockTag         string
 	Ext              string
 }
 
@@ -94,12 +100,29 @@ func (self *TemplateEx) Fetch(tmplName string, fn func() htmlTpl.FuncMap, values
 			self.BeforeRender(&content)
 		}
 		subcs := make(map[string]string, 0) //子模板内容
+		extcs := make(map[string]string, 0) //母板内容
 
 		ident := self.DelimLeft + self.IncludeTag + self.DelimRight
 		if self.cachedRegexIdent != ident || self.incTagRegex == nil {
-			self.incTagRegex = regexp.MustCompile(regexp.QuoteMeta(self.DelimLeft) + self.IncludeTag + `[\s]+"([^"]+)"(?:[\s]+([^` + regexp.QuoteMeta(self.DelimRight[0:1]) + `]+))?[\s]*` + regexp.QuoteMeta(self.DelimRight))
+			left := regexp.QuoteMeta(self.DelimLeft)
+			right := regexp.QuoteMeta(self.DelimRight)
+			rfirst := regexp.QuoteMeta(self.DelimRight[0:1])
+			self.incTagRegex = regexp.MustCompile(left + self.IncludeTag + `[\s]+"([^"]+)"(?:[\s]+([^` + rfirst + `]+))?[\s]*` + right)
+			self.extTagRegex = regexp.MustCompile(left + self.ExtendTag + `[\s]+"([^"]+)"(?:[\s]+([^` + rfirst + `]+))?[\s]*` + right)
+			self.blkTagRegex = regexp.MustCompile(left + self.BlockTag + `[\s]+"([^"]+)"[\s]*` + right + `(.*)` + left + `/` + self.BlockTag + right)
 		}
-
+		m := self.extTagRegex.FindAllString(content, -1)
+		if len(m) > 1 {
+			self.ParseBlock(content, &subcs, &extcs)
+			extFile := m[1]
+			passObject := m[2]
+			b, err = self.RawContent(extFile)
+			if err != nil {
+				return fmt.Sprintf("RenderTemplate %v read err: %s", extFile, err)
+			}
+			content = string(b)
+			content = self.ParseExtend(content, &extcs, passObject)
+		}
 		content = self.ContainsSubTpl(content, &subcs)
 		//fmt.Println("====>", content)
 		t := htmlTpl.New(tmplName)
@@ -136,11 +159,31 @@ func (self *TemplateEx) Fetch(tmplName string, fn func() htmlTpl.FuncMap, values
 			}
 			_, err = t.Parse(subc)
 			if err != nil {
-				return fmt.Sprintf("Parse %v err: %v", name, err)
+				return fmt.Sprintf("Parse File %v err: %v", name, err)
 			}
 			self.CachedRelation[name] = &CcRel{
 				Rel: map[string]uint8{tmplName: 0},
 				Tpl: t,
+			}
+		}
+		for name, extc := range extcs {
+			var t *htmlTpl.Template
+			if tmpl == nil {
+				tmpl = htmlTpl.New(name)
+				tmpl.Delims(self.DelimLeft, self.DelimRight)
+				tmpl.Funcs(funcMap)
+			}
+			if name == tmpl.Name() {
+				t = tmpl
+			} else {
+				t = tmpl.New(name)
+			}
+			if self.BeforeRender != nil {
+				self.BeforeRender(&extc)
+			}
+			_, err = t.Parse(extc)
+			if err != nil {
+				return fmt.Sprintf("Parse Block %v err: %v", name, err)
 			}
 		}
 		self.CachedRelation[tmplName] = &CcRel{
@@ -151,6 +194,34 @@ func (self *TemplateEx) Fetch(tmplName string, fn func() htmlTpl.FuncMap, values
 		tmpl = cv.Tpl
 	}
 	return self.Parse(tmpl, values)
+}
+
+func (self *TemplateEx) ParseBlock(content string, subcs *map[string]string, extcs *map[string]string) {
+	matches := self.blkTagRegex.FindAllStringSubmatch(content, -1)
+	//dump(matches)
+	for _, v := range matches {
+		blockName := v[1]
+		content := v[2]
+		(*extcs)[blockName] = self.Tag(`define "`+blockName+`"`) + self.ContainsSubTpl(content, subcs) + self.Tag(`end`)
+	}
+}
+
+func (self *TemplateEx) ParseExtend(content string, extcs *map[string]string, passObject string) string {
+	if passObject == "" {
+		passObject = "."
+	}
+	matches := self.blkTagRegex.FindAllStringSubmatch(content, -1)
+	//dump(matches)
+	for _, v := range matches {
+		matched := v[0]
+		blockName := v[1]
+		if _, ok := (*extcs)[blockName]; ok {
+			content = strings.Replace(content, matched, self.Tag(`template "`+blockName+`" `+passObject), -1)
+		} else {
+			content = strings.Replace(content, matched, ``, -1)
+		}
+	}
+	return content
 }
 
 func (self *TemplateEx) ContainsSubTpl(content string, subcs *map[string]string) string {
