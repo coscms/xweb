@@ -6,7 +6,7 @@ import (
 	"crypto/tls"
 	"net/http"
 
-	"github.com/coscms/xweb/log"
+	"github.com/coscms/xweb/lib/log"
 )
 
 const (

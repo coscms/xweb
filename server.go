@@ -12,9 +12,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/coscms/xweb/httpsession"
+	"github.com/coscms/xweb/lib/httpsession"
+	"github.com/coscms/xweb/lib/log"
 	S "github.com/coscms/xweb/lib/manners"
-	"github.com/coscms/xweb/log"
 	"golang.org/x/net/netutil"
 )
 

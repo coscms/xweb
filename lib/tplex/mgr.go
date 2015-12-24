@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/coscms/xweb/log"
+	"github.com/coscms/xweb/lib/log"
 	"github.com/howeyc/fsnotify"
 )
 

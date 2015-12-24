@@ -21,10 +21,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/coscms/xweb/httpsession"
+	"github.com/coscms/xweb/lib/httpsession"
+	"github.com/coscms/xweb/lib/log"
 	"github.com/coscms/xweb/lib/str"
-	"github.com/coscms/xweb/log"
-	"github.com/coscms/xweb/uuid"
+	"github.com/coscms/xweb/lib/uuid"
 )
 
 type Mapper struct{}

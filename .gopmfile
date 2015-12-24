@@ -1,8 +1,8 @@
 [deps]
-github.com/coscms/xweb/httpsession = 
-github.com/coscms/xweb/log = 
-github.com/coscms/xweb/uuid = 
 github.com/howeyc/fsnotify = 
+github.com/admpub/manners =
+golang.org/x/net/netutil =
+github.com/coscms/tagfast =
 
 [res]
 include = 

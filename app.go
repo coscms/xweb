@@ -17,10 +17,10 @@ import (
 	"time"
 
 	"github.com/coscms/tagfast"
-	"github.com/coscms/xweb/httpsession"
+	"github.com/coscms/xweb/lib/httpsession"
+	"github.com/coscms/xweb/lib/log"
 	"github.com/coscms/xweb/lib/route"
 	"github.com/coscms/xweb/lib/tplex"
-	"github.com/coscms/xweb/log"
 )
 
 var (

@@ -3,8 +3,8 @@ package main
 import (
 	"os"
 
-	"github.com/coscms/xweb/log"
 	"github.com/coscms/xweb"
+	"github.com/coscms/xweb/lib/log"
 )
 
 type MainAction struct {
