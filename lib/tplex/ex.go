@@ -209,11 +209,11 @@ func (self *TemplateEx) ParseExtend(content string, extcs *map[string]string, pa
 	for _, v := range matches {
 		matched := v[0]
 		blockName := v[1]
-		str := v[2]
+		innerStr := v[2]
 		if _, ok := (*extcs)[blockName]; ok {
 			content = strings.Replace(content, matched, self.Tag(`template "`+blockName+`" `+passObject), -1)
 		} else {
-			content = strings.Replace(content, matched, str, -1)
+			content = strings.Replace(content, matched, innerStr, -1)
 		}
 	}
 	return content
