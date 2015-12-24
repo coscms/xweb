@@ -35,8 +35,6 @@ func New(logger *log.Logger, templateDir string, cached ...bool) *TemplateEx {
 			reloadTemplates = cached[1]
 		}
 		t.TemplateMgr.OnChangeCallback = func(name, typ, event string) {
-			//logger.Infof("OnChange: %v %v %v", name, typ, event)
-			//dump(t.CachedRelation)
 			switch event {
 			case "create":
 			case "delete", "modify", "rename":
@@ -109,13 +107,13 @@ func (self *TemplateEx) Fetch(tmplName string, fn func() htmlTpl.FuncMap, values
 			rfirst := regexp.QuoteMeta(self.DelimRight[0:1])
 			self.incTagRegex = regexp.MustCompile(left + self.IncludeTag + `[\s]+"([^"]+)"(?:[\s]+([^` + rfirst + `]+))?[\s]*` + right)
 			self.extTagRegex = regexp.MustCompile(left + self.ExtendTag + `[\s]+"([^"]+)"(?:[\s]+([^` + rfirst + `]+))?[\s]*` + right)
-			self.blkTagRegex = regexp.MustCompile(left + self.BlockTag + `[\s]+"([^"]+)"[\s]*` + right + `(.*)` + left + `/` + self.BlockTag + right)
+			self.blkTagRegex = regexp.MustCompile(`(?s)` + left + self.BlockTag + `[\s]+"([^"]+)"[\s]*` + right + `(.*?)` + left + `\/` + self.BlockTag + right)
 		}
-		m := self.extTagRegex.FindAllString(content, -1)
-		if len(m) > 1 {
+		m := self.extTagRegex.FindAllStringSubmatch(content, 1)
+		if len(m) > 0 {
 			self.ParseBlock(content, &subcs, &extcs)
-			extFile := m[1]
-			passObject := m[2]
+			extFile := m[0][1] + self.Ext
+			passObject := m[0][2]
 			b, err = self.RawContent(extFile)
 			if err != nil {
 				return fmt.Sprintf("RenderTemplate %v read err: %s", extFile, err)
@@ -124,7 +122,6 @@ func (self *TemplateEx) Fetch(tmplName string, fn func() htmlTpl.FuncMap, values
 			content = self.ParseExtend(content, &extcs, passObject)
 		}
 		content = self.ContainsSubTpl(content, &subcs)
-		//fmt.Println("====>", content)
 		t := htmlTpl.New(tmplName)
 		t.Delims(self.DelimLeft, self.DelimRight)
 		var funcMap htmlTpl.FuncMap
@@ -142,7 +139,6 @@ func (self *TemplateEx) Fetch(tmplName string, fn func() htmlTpl.FuncMap, values
 				self.CachedRelation[name].Rel[tmplName] = 0
 				continue
 			}
-			//fmt.Println("====>", name)
 			var t *htmlTpl.Template
 			if tmpl == nil {
 				tmpl = htmlTpl.New(name)
@@ -198,7 +194,6 @@ func (self *TemplateEx) Fetch(tmplName string, fn func() htmlTpl.FuncMap, values
 
 func (self *TemplateEx) ParseBlock(content string, subcs *map[string]string, extcs *map[string]string) {
 	matches := self.blkTagRegex.FindAllStringSubmatch(content, -1)
-	//dump(matches)
 	for _, v := range matches {
 		blockName := v[1]
 		content := v[2]
@@ -211,14 +206,14 @@ func (self *TemplateEx) ParseExtend(content string, extcs *map[string]string, pa
 		passObject = "."
 	}
 	matches := self.blkTagRegex.FindAllStringSubmatch(content, -1)
-	//dump(matches)
 	for _, v := range matches {
 		matched := v[0]
 		blockName := v[1]
+		str := v[2]
 		if _, ok := (*extcs)[blockName]; ok {
 			content = strings.Replace(content, matched, self.Tag(`template "`+blockName+`" `+passObject), -1)
 		} else {
-			content = strings.Replace(content, matched, ``, -1)
+			content = strings.Replace(content, matched, str, -1)
 		}
 	}
 	return content
@@ -226,7 +221,6 @@ func (self *TemplateEx) ParseExtend(content string, extcs *map[string]string, pa
 
 func (self *TemplateEx) ContainsSubTpl(content string, subcs *map[string]string) string {
 	matches := self.incTagRegex.FindAllStringSubmatch(content, -1)
-	//dump(matches)
 	for _, v := range matches {
 		matched := v[0]
 		tmplFile := v[1]
